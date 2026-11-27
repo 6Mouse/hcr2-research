@@ -31,7 +31,7 @@ The workflow follows the shared queues and independently checked progress of [Fa
 
 ## Try the ARM64 matching pilot
 
-HCR2-005 uses a small original C++ function. Install Android NDK `30.0.14904198` with Android Studio or `sdkmanager --install "ndk;30.0.14904198"`. Then run:
+HCR2-005 uses a small original C++ function. Install Android NDK `27.3.13750724` with Android Studio or `sdkmanager --install "ndk;27.3.13750724"`. Then run:
 
 ```powershell
 python tools/verify_fixture.py

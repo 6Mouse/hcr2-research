@@ -43,7 +43,8 @@ def tools(ndk, spec):
     clang, objcopy, readelf = (directory / (name + suffix)
                               for name in ('clang++', 'llvm-objcopy', 'llvm-readelf'))
     version = subprocess.check_output([clang, '--version'], text=True, timeout=15).splitlines()[0]
-    if f'clang version {spec["clang_version"]} ' not in version or spec['clang_revision'] not in version:
+    if (f'clang version {spec["clang_version"]} ' not in version or
+            spec['clang_revision'] not in version or spec['clang_build'] not in version):
         raise ValueError(f'Unexpected compiler: {version}')
     print(version, flush=True)
     return clang, objcopy, readelf

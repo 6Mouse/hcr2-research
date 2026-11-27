@@ -1,8 +1,9 @@
 {
-  "ndk_package": "30.0.14904198",
-  "ndk_revision": "30.0.14904198-beta1",
-  "clang_version": "21.0.0",
-  "clang_revision": "9f872551d3c681d06fd303b36f16ed5c274735eb",
+  "ndk_package": "27.3.13750724",
+  "ndk_revision": "27.3.13750724",
+  "clang_version": "18.0.4",
+  "clang_revision": "d8003a456d14a3deb8054cdaa529ffbf02d9b262",
+  "clang_build": "r522817d",
   "flags": [
     "--target=aarch64-linux-android24", "-std=c++17", "-O2", "-ffreestanding",
     "-fno-exceptions", "-fno-rtti", "-fno-stack-protector", "-fno-unwind-tables",

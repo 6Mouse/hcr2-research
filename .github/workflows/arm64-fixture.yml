@@ -26,8 +26,8 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: |
           curl --fail --location --retry 3 --silent --show-error \
-            --output ndk.zip https://dl.google.com/android/repository/android-ndk-r30-beta1-linux.zip
-          printf '%s  %s\n' 26b746e5a1e7ac3371f2a862a2f52a7c0740aa8a ndk.zip | sha1sum --check
+            --output ndk.zip https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+          printf '%s  %s\n' 22105e410cf29afcf163760cc95522b9fb981121 ndk.zip | sha1sum --check
           unzip -q ndk.zip
       - name: Check the reproducible build and exact function match
         run: |
@@ -36,7 +36,7 @@ jobs:
             args=()
             if [[ ! -f "$fixture/candidate.cpp" ]]; then args+=(--reference-only); fi
             python3 tools/verify_fixture.py --fixture "$fixture" \
-              --ndk "$RUNNER_TEMP/android-ndk-r30-beta1" "${args[@]}"
+              --ndk "$RUNNER_TEMP/android-ndk-r27d" "${args[@]}"
           done
       - name: Run the starter checks
         run: python3 project.py check
