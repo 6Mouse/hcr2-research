@@ -6,6 +6,7 @@ from html import escape
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 from tempfile import SpooledTemporaryFile
 from urllib.parse import urlparse
@@ -79,11 +80,15 @@ def load_tasks():
             raise ValueError(f'Invalid status for {identifier}')
         if not all(task[k].strip() for k in ('title', 'area', 'acceptance')):
             raise ValueError(f'Missing task description for {identifier}')
+        evidence = task.get('evidence', '')
+        if evidence:
+            url = urlparse(evidence)
+            if url.scheme != 'https' or not url.hostname:
+                raise ValueError(f'{identifier} requires an HTTPS evidence URL')
         if task['state'] == 'verified':
             contributor = task.get('contributor', '').strip()
             reviewer = task.get('reviewer', '').strip()
-            evidence = urlparse(task.get('evidence', ''))
-            if not contributor or not reviewer or contributor.casefold() == reviewer.casefold() or evidence.scheme != 'https' or not evidence.netloc:
+            if not contributor or not reviewer or contributor.casefold() == reviewer.casefold() or not evidence:
                 raise ValueError(f'{identifier} requires an independent reviewer and HTTPS evidence')
     return tasks
 
@@ -99,6 +104,9 @@ def dashboard(baseline):
         if task['state'] == 'verified':
             url = escape(task['evidence'], quote=True)
             evidence = f'<a href="{url}">Review evidence</a> · {escape(task["reviewer"])}'
+        elif task.get('evidence'):
+            url = escape(task['evidence'], quote=True)
+            evidence = f'<a href="{url}">Run evidence</a>'
         rows.append(f'<tr data-state="{escape(task["state"])}"><td><code>{task["id"]}</code></td>'
                     f'<td><b>{escape(task["title"])}</b><small>{escape(task["acceptance"])}</small></td>'
                     f'<td>{escape(task["area"])}</td><td>{escape(task["state"].title())}</td><td>{evidence}</td></tr>')
@@ -123,9 +131,17 @@ def main():
     diff.add_argument('reference', type=Path)
     diff.add_argument('candidate', type=Path)
     commands.add_parser('dashboard', help='Validate task data and render the local dashboard')
+    commands.add_parser('check', help='Run the starter checks without the APK or Android NDK')
     args = parser.parse_args()
     try:
         baseline = json.loads((ROOT / 'baseline.json').read_text(encoding='utf-8'))
+        if args.command == 'check':
+            subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests'],
+                           cwd=ROOT, check=True, timeout=30)
+            subprocess.run([sys.executable, 'replay_drift_fixture.py'], cwd=ROOT,
+                           check=True, timeout=30)
+            dashboard(baseline)
+            return 0
         if args.command == 'dashboard':
             dashboard(baseline)
             return 0
@@ -135,7 +151,7 @@ def main():
             report['match'] = report['match'] and report['archive_match']
         print(json.dumps(report, indent=2))
         return 0 if report['match'] else 1
-    except (OSError, BadZipFile, KeyError, ValueError) as exc:
+    except (OSError, BadZipFile, KeyError, ValueError, subprocess.SubprocessError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
 

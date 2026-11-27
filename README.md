@@ -4,24 +4,26 @@ Community work queue for offline observations and verification tools. The first 
 
 ## Start here
 
-Requires Python 3.10 or newer. Use the [shared HCR2 1.76.1 split archive on Google Drive](https://drive.google.com/file/d/1Df8zMPtGU62bngYAISfYo0ktUJVTL32F/view?usp=sharing). Keep it outside Git. The expected SHA-256 for the full archive is `62c5269ef6a52fc372b689cbe74a017ec595d7ddf0f791a04d9550ac07b33669`.
+Clone this repository and run `python project.py check` from its root with Python 3.10 or newer. It checks the comparer, archive verifier and replay fixture, then builds `dist/index.html`. This command needs no APK, NDK, or credentials. Open the dashboard or read [the work queue](tasks.json) to pick a task.
 
-Use `--exact-archive` before starting a task. It checks the full archive and the base APK, ARM64 split, and engine inside it. Google Drive currently returns a download quota error, so the Drive copy still needs its hash checked against the verified local reference. If the download or verification fails, report that in the task issue.
+## Original 1.76.1 reference
+
+For tasks that need the game baseline, use the [shared HCR2 1.76.1 split archive on Google Drive](https://drive.google.com/file/d/1Df8zMPtGU62bngYAISfYo0ktUJVTL32F/view?usp=sharing). Keep it outside Git. The expected SHA-256 for the full archive is `62c5269ef6a52fc372b689cbe74a017ec595d7ddf0f791a04d9550ac07b33669`.
+
+Use `--exact-archive` before starting a task that depends on the game baseline. It checks the full archive and the base APK, ARM64 split, and engine inside it. If verification fails, report the hashes in the task issue.
 
 ```powershell
-python project.py verify-release --exact-archive '.\local-output\Hill Climb Racing 2 1.76.1 @Lan9118.apks'
-python project.py compare .\local-output\reference.o .\local-output\rebuilt.o
-python project.py dashboard
+python project.py verify-release --exact-archive 'C:\path\to\downloaded.apks'
 ```
 
-Open `dist/index.html` for the dashboard. The compare command exits 1 on any byte difference and reports both SHA-256 values, file sizes and the first differing byte offset. Save the output, toolchain version and compiler flags as review evidence. The reference base and ARM64 split passed Android signature verification and shared a certificate. The source-kit APK failed that check and is unsuitable as the original reference.
+For artifact comparisons, run `python project.py compare <reference> <candidate>`. It exits 1 on a byte difference and reports both SHA-256 values, file sizes and the first differing byte offset. Save the output, toolchain version and compiler flags as evidence.
 
 ## Contribute with an agent
 
-1. Open a claim issue for one ID in `tasks.json`. Check the existing issues for competing claims.
-2. Give your agent that task ID and ask it to read `AGENTS.md`. Use a task-specific branch or worktree.
-3. Submit original tooling, observations or test fixtures in a small PR with the reproduction steps. Link the claim issue.
-4. A second person reproduces the result. The maintainer updates the task record to `verified` with `contributor`, `reviewer` and an HTTPS `evidence` URL. Only verified records count toward the dashboard.
+1. Pick one open ID in `tasks.json`. Check Issues for an existing claim, then open a claim issue.
+2. Give your agent the ID and `AGENTS.md`. Work on a separate branch or fork.
+3. Run `python project.py check`. Submit a small PR that links the claim and contains exact reproduction steps.
+4. A maintainer reviews the PR and records separate reproduction evidence. Only reviewed, reproduced work counts as verified on the dashboard.
 
 The workflow follows the shared queues and independently checked progress of [Fallout 3 Decomp](https://f3decomp.com/how) and [Fallout: New Vegas Decomp](https://fnvdecomp.com/how). The dashboard counts verified research tasks. An exact artifact match is recorded as test evidence, and the dashboard makes no claim about percentage of the game reconstructed.
 
@@ -41,6 +43,6 @@ The compiler and flags are fixture settings only. The verifier checks an isolate
 
 ## Share the project
 
-Create a GitHub repository under the account or organization that will maintain it. Push this directory only. Enable Issues, require a human review on the default branch, and use the claim and PR templates. If publishing the dashboard, serve only the generated `dist` directory. The baseline APK, local outputs, and all historical research stay outside the published files.
+See [the launch checklist](LAUNCH.md) for release and sharing steps. The baseline APK, local outputs, and historical research stay outside the project files.
 
 Unofficial project. Hill Climb Racing 2 is used to identify the subject of the research.

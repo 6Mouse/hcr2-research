@@ -12,7 +12,7 @@
 <section class="cards" aria-label="Task totals">%%CARDS%%</section>
 <section><div class="toolbar"><h2>Work queue</h2><label>Status <select id="status"><option value="">All tasks</option><option>open</option><option>claimed</option><option>in review</option><option>verified</option></select></label></div>
 <div class="table"><table><thead><tr><th scope="col">ID</th><th scope="col">Task and acceptance criteria</th><th scope="col">Area</th><th scope="col">Status</th><th scope="col">Evidence</th></tr></thead><tbody>%%ROWS%%<tr id="empty" hidden><td colspan="5">No tasks in this status.</td></tr></tbody></table></div></section>
-<footer>Claim a task in the project’s issue tracker. A verified entry requires an independent reviewer.</footer>
+<footer>Claim a task in the project’s issue tracker. Verified entries have a separate reproduction and review record.</footer>
 </main>
 <script>
 const status = document.querySelector('#status');
