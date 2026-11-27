@@ -14,8 +14,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Install pinned Android NDK
-        run: sdkmanager --install 'ndk;30.0.14904198'
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --location --retry 3 --silent --show-error \
+            --output ndk.zip https://dl.google.com/android/repository/android-ndk-r30-beta1-linux.zip
+          printf '%s  %s\n' 26b746e5a1e7ac3371f2a862a2f52a7c0740aa8a ndk.zip | sha1sum --check
+          unzip -q ndk.zip
       - name: Check the reproducible build and exact function match
-        run: python3 tools/verify_fixture.py
+        run: python3 tools/verify_fixture.py --ndk "$RUNNER_TEMP/android-ndk-r30-beta1"
       - name: Validate the dashboard registry
         run: python3 project.py dashboard
