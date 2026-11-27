@@ -1,8 +1,12 @@
 {
   "version": "1.76.1",
   "abi": "arm64-v8a",
-  "apk_bytes": 201230154,
-  "apk_sha256": "ed0e38a6f587fa6ae13052b678298e8d378036ec360c270335a9f4891a9f1845",
+  "archive_bytes": 262206792,
+  "archive_sha256": "62c5269ef6a52fc372b689cbe74a017ec595d7ddf0f791a04d9550ac07b33669",
+  "base_entry": "com.fingersoft.hcr2.apk",
+  "base_sha256": "08e4bad3b26c70952b81f27aa2ed09a62cc0716033292fa628c8b09907c2538a",
+  "arm64_entry": "config.arm64_v8a.apk",
+  "arm64_sha256": "9f5b1835149acd791d7661112cc4c9ab4710b11acdf216fb76a9634be1d0e1ed",
   "engine_entry": "lib/arm64-v8a/libcocos2dcpp.so",
   "engine_sha256": "f2095931d9366d7e42e123fa127fc0523299280ad01066092204c855894c9be4"
 }

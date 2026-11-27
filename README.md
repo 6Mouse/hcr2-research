@@ -4,15 +4,15 @@ Community work queue for offline observations and verification tools. The first 
 
 ## Start here
 
-Requires Python 3.10 or newer. Use the APK you already have locally. The baseline verifier checks the full APK and its packaged ARM64 engine entry.
+Requires Python 3.10 or newer. Use your local original split archive. The verifier checks the base APK, ARM64 split and packaged engine bytes separately from the outer archive hash. A different ZIP wrapper can contain identical signed splits.
 
 ```powershell
-python project.py verify-apk 'A:\hcr2_stuff\hitboxes\1.76.1\source-kit\input\stock-1.76.1-arm64.apk'
+python project.py verify-release .\local-output\HCR2-1.76.1-Original-Splits.apks
 python project.py compare .\local-output\reference.o .\local-output\rebuilt.o
 python project.py dashboard
 ```
 
-Open `dist/index.html` for the dashboard. The compare command exits 1 on any byte difference and reports both SHA-256 values, file sizes and the first differing byte offset. Save the output, toolchain version and compiler flags as review evidence. SHA-256 values in `baseline.json` identify the local reference used by this project, not a claim about provenance from a public download.
+Open `dist/index.html` for the dashboard. The compare command exits 1 on any byte difference and reports both SHA-256 values, file sizes and the first differing byte offset. Save the output, toolchain version and compiler flags as review evidence. The reference base and ARM64 split passed Android signature verification and shared a certificate. The source-kit APK failed that check and is unsuitable as the original reference.
 
 ## Contribute with an agent
 

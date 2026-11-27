@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 import sys
+from tempfile import SpooledTemporaryFile
 from urllib.parse import urlparse
 from zipfile import BadZipFile, ZipFile
 
@@ -44,15 +45,25 @@ def compare(reference, candidate):
                 reference_sha256=left_hash.hexdigest(), candidate_sha256=right_hash.hexdigest())
 
 
-def verify_apk(apk, baseline):
-    with apk.open('rb') as source:
+def verify_release(path, baseline):
+    with path.open('rb') as source:
         sha = digest(source)
-    report = dict(match=False, apk_sha256=sha, apk_bytes=apk.stat().st_size)
-    if sha != baseline['apk_sha256'] or report['apk_bytes'] != baseline['apk_bytes']:
-        return report
-    with ZipFile(apk) as archive, archive.open(baseline['engine_entry']) as engine:
-        report['engine_sha256'] = digest(engine)
-    report['match'] = report['engine_sha256'] == baseline['engine_sha256']
+    report = dict(match=False, archive_sha256=sha, archive_bytes=path.stat().st_size)
+    with ZipFile(path) as archive:
+        with archive.open(baseline['base_entry']) as base:
+            report['base_sha256'] = digest(base)
+        with archive.open(baseline['arm64_entry']) as split, SpooledTemporaryFile(max_size=BLOCK) as local:
+            arm64_hash = hashlib.sha256()
+            for block in iter(lambda: split.read(BLOCK), b''):
+                arm64_hash.update(block)
+                local.write(block)
+            report['arm64_sha256'] = arm64_hash.hexdigest()
+            with ZipFile(local) as apk, apk.open(baseline['engine_entry']) as engine:
+                report['engine_sha256'] = digest(engine)
+    report['archive_match'] = (sha == baseline['archive_sha256'] and
+                               report['archive_bytes'] == baseline['archive_bytes'])
+    report['match'] = all(report[key] == baseline[key] for key in
+                          ('base_sha256', 'arm64_sha256', 'engine_sha256'))
     return report
 
 
@@ -93,7 +104,7 @@ def dashboard(baseline):
                     f'<td>{escape(task["area"])}</td><td>{escape(task["state"].title())}</td><td>{evidence}</td></tr>')
     page = (ROOT / 'dashboard.html').read_text(encoding='utf-8')
     for key, value in {'BASELINE': escape(f'{baseline["version"]} · {baseline["abi"]}'),
-                       'HASH': escape(baseline['apk_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows)}.items():
+                       'HASH': escape(baseline['archive_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows)}.items():
         page = page.replace('%%' + key + '%%', value)
     output = ROOT / 'dist' / 'index.html'
     output.parent.mkdir(exist_ok=True)
@@ -104,8 +115,8 @@ def dashboard(baseline):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
-    verify = commands.add_parser('verify-apk', help='Verify the unmodified reference APK')
-    verify.add_argument('apk', type=Path)
+    verify = commands.add_parser('verify-release', help='Verify the original base and ARM64 split in a local APKS archive')
+    verify.add_argument('archive', type=Path)
     diff = commands.add_parser('compare', help='Compare two local artifacts byte for byte')
     diff.add_argument('reference', type=Path)
     diff.add_argument('candidate', type=Path)
@@ -117,7 +128,7 @@ def main():
             dashboard(baseline)
             return 0
         report = (compare(args.reference, args.candidate) if args.command == 'compare'
-                  else verify_apk(args.apk, baseline))
+                  else verify_release(args.archive, baseline))
         print(json.dumps(report, indent=2))
         return 0 if report['match'] else 1
     except (OSError, BadZipFile, KeyError, ValueError) as exc:
