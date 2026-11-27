@@ -1,0 +1,8 @@
+{
+  "version": "1.76.1",
+  "abi": "arm64-v8a",
+  "apk_bytes": 201230154,
+  "apk_sha256": "ed0e38a6f587fa6ae13052b678298e8d378036ec360c270335a9f4891a9f1845",
+  "engine_entry": "lib/arm64-v8a/libcocos2dcpp.so",
+  "engine_sha256": "f2095931d9366d7e42e123fa127fc0523299280ad01066092204c855894c9be4"
+}

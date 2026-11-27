@@ -1,0 +1,129 @@
+"""Local baseline verification, exact comparison, and dashboard generation."""
+import argparse
+from collections import Counter
+import hashlib
+from html import escape
+import json
+from pathlib import Path
+import re
+import sys
+from urllib.parse import urlparse
+from zipfile import BadZipFile, ZipFile
+
+ROOT = Path(__file__).resolve().parent
+BLOCK = 1024 * 1024
+
+
+def digest(stream):
+    result = hashlib.sha256()
+    for block in iter(lambda: stream.read(BLOCK), b''):
+        result.update(block)
+    return result.hexdigest()
+
+
+def compare(reference, candidate):
+    first_difference = None
+    offset = 0
+    left_hash, right_hash = hashlib.sha256(), hashlib.sha256()
+    left_size = right_size = 0
+    with reference.open('rb') as left, candidate.open('rb') as right:
+        while True:
+            a, b = left.read(BLOCK), right.read(BLOCK)
+            if not a and not b:
+                break
+            if first_difference is None and a != b:
+                relative = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+                first_difference = offset + relative
+            left_hash.update(a)
+            right_hash.update(b)
+            left_size += len(a)
+            right_size += len(b)
+            offset += BLOCK
+    return dict(match=first_difference is None, first_difference=first_difference,
+                reference_bytes=left_size, candidate_bytes=right_size,
+                reference_sha256=left_hash.hexdigest(), candidate_sha256=right_hash.hexdigest())
+
+
+def verify_apk(apk, baseline):
+    with apk.open('rb') as source:
+        sha = digest(source)
+    report = dict(match=False, apk_sha256=sha, apk_bytes=apk.stat().st_size)
+    if sha != baseline['apk_sha256'] or report['apk_bytes'] != baseline['apk_bytes']:
+        return report
+    with ZipFile(apk) as archive, archive.open(baseline['engine_entry']) as engine:
+        report['engine_sha256'] = digest(engine)
+    report['match'] = report['engine_sha256'] == baseline['engine_sha256']
+    return report
+
+
+def load_tasks():
+    tasks = json.loads((ROOT / 'tasks.json').read_text(encoding='utf-8'))
+    seen = set()
+    for task in tasks:
+        identifier = task['id']
+        if not re.fullmatch(r'HCR2-\d{3,}', identifier) or identifier in seen:
+            raise ValueError(f'Invalid or duplicate task ID: {identifier}')
+        seen.add(identifier)
+        if task['state'] not in {'open', 'claimed', 'in review', 'verified'}:
+            raise ValueError(f'Invalid status for {identifier}')
+        if not all(task[k].strip() for k in ('title', 'area', 'acceptance')):
+            raise ValueError(f'Missing task description for {identifier}')
+        if task['state'] == 'verified':
+            contributor = task.get('contributor', '').strip()
+            reviewer = task.get('reviewer', '').strip()
+            evidence = urlparse(task.get('evidence', ''))
+            if not contributor or not reviewer or contributor.casefold() == reviewer.casefold() or evidence.scheme != 'https' or not evidence.netloc:
+                raise ValueError(f'{identifier} requires an independent reviewer and HTTPS evidence')
+    return tasks
+
+
+def dashboard(baseline):
+    tasks = load_tasks()
+    counts = Counter(task['state'] for task in tasks)
+    cards = ''.join(f'<div><strong>{counts[state]}</strong><span>{state.title()}</span></div>'
+                    for state in ('open', 'claimed', 'in review', 'verified'))
+    rows = []
+    for task in tasks:
+        evidence = '—'
+        if task['state'] == 'verified':
+            url = escape(task['evidence'], quote=True)
+            evidence = f'<a href="{url}">Review evidence</a> · {escape(task["reviewer"])}'
+        rows.append(f'<tr data-state="{escape(task["state"])}"><td><code>{task["id"]}</code></td>'
+                    f'<td><b>{escape(task["title"])}</b><small>{escape(task["acceptance"])}</small></td>'
+                    f'<td>{escape(task["area"])}</td><td>{escape(task["state"].title())}</td><td>{evidence}</td></tr>')
+    page = (ROOT / 'dashboard.html').read_text(encoding='utf-8')
+    for key, value in {'BASELINE': escape(f'{baseline["version"]} · {baseline["abi"]}'),
+                       'HASH': escape(baseline['apk_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows)}.items():
+        page = page.replace('%%' + key + '%%', value)
+    output = ROOT / 'dist' / 'index.html'
+    output.parent.mkdir(exist_ok=True)
+    output.write_text(page, encoding='utf-8')
+    print(output)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest='command', required=True)
+    verify = commands.add_parser('verify-apk', help='Verify the unmodified reference APK')
+    verify.add_argument('apk', type=Path)
+    diff = commands.add_parser('compare', help='Compare two local artifacts byte for byte')
+    diff.add_argument('reference', type=Path)
+    diff.add_argument('candidate', type=Path)
+    commands.add_parser('dashboard', help='Validate task data and render the local dashboard')
+    args = parser.parse_args()
+    try:
+        baseline = json.loads((ROOT / 'baseline.json').read_text(encoding='utf-8'))
+        if args.command == 'dashboard':
+            dashboard(baseline)
+            return 0
+        report = (compare(args.reference, args.candidate) if args.command == 'compare'
+                  else verify_apk(args.apk, baseline))
+        print(json.dumps(report, indent=2))
+        return 0 if report['match'] else 1
+    except (OSError, BadZipFile, KeyError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())

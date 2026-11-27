@@ -1,0 +1,17 @@
+name: Claim a research task
+description: Coordinate one task with other contributors
+title: "[Claim] HCR2-"
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Task ID
+      placeholder: HCR2-001
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Approach and expected evidence
+    validations:
+      required: true

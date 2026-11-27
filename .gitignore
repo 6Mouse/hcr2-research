@@ -1,0 +1,14 @@
+__pycache__/
+private-inputs/
+local-output/
+dist/
+*.apk
+*.apks
+*.xapk
+*.so
+*.bin
+*.dex
+*.pcap*
+*.tar*
+*.zip
+.env*
