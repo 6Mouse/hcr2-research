@@ -1,0 +1,23 @@
+{
+  "id": "HCR2-005",
+  "symbol": "hcr2_fixture",
+  "ndk_package": "30.0.14904198",
+  "ndk_revision": "30.0.14904198-beta1",
+  "clang_version": "21.0.0",
+  "clang_revision": "9f872551d3c681d06fd303b36f16ed5c274735eb",
+  "flags": [
+    "--target=aarch64-linux-android24",
+    "-std=c++17",
+    "-O2",
+    "-ffreestanding",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-stack-protector",
+    "-fno-unwind-tables",
+    "-fno-asynchronous-unwind-tables",
+    "-ffunction-sections"
+  ],
+  "object_sha256": "a381cfc366602af9bfb59fac09660080103d813029592833a9add70656b2a7d2",
+  "function_bytes": 16,
+  "function_sha256": "275b8f9d9110681e011ad1f951aa3c3713104bf7de9b163bbd1377615158597f"
+}

@@ -25,6 +25,18 @@ Open `dist/index.html` for the dashboard. The compare command exits 1 on any byt
 
 The workflow follows the shared queues and independently checked progress of [Fallout 3 Decomp](https://f3decomp.com/how) and [Fallout: New Vegas Decomp](https://fnvdecomp.com/how). The dashboard counts verified research tasks. An exact artifact match is recorded as test evidence, and the dashboard makes no claim about percentage of the game reconstructed.
 
+## Try the ARM64 matching pilot
+
+HCR2-005 uses a small original C++ function. Install Android NDK `30.0.14904198` with Android Studio or `sdkmanager --install "ndk;30.0.14904198"`. Then run:
+
+```powershell
+python tools/verify_fixture.py
+```
+
+Use `--ndk <directory>` if the NDK is outside the normal SDK path. The verifier checks the compiler identity, builds the reference twice, checks the pinned object and function hashes, and compares the candidate's function bytes. A deliberately different implementation must fail the byte comparison. To try your own source, pass `--candidate <file.cpp>`. The candidate must export the C symbol `hcr2_fixture` with the signature in `fixtures/arm64/reference.cpp`.
+
+`fixtures/arm64/match.json` records the task ID, compiler and target flags, symbol, byte count and reference hashes. For another authorized, self-contained fixture, use the same structure and record any shared declarations alongside it. The pilot compiler and flags are fixture settings only. The command checks an isolated relocation-free function and does not infer original HCR2 build settings or compare a linked APK. A reviewer can run the command on another machine and attach the output to the PR. CI also runs the pilot on Linux without the game archive.
+
 ## Share the project
 
 Create a GitHub repository under the account or organization that will maintain it. Push this directory only. Enable Issues, require a human review on the default branch, and use the claim and PR templates. If publishing the dashboard, serve only the generated `dist` directory. The baseline APK, local outputs, and all historical research stay outside the published files.

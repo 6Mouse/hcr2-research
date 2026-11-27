@@ -1,0 +1,21 @@
+name: ARM64 matching pilot
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  arm64-fixture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install pinned Android NDK
+        run: sdkmanager --install 'ndk;30.0.14904198'
+      - name: Check the reproducible build and exact function match
+        run: python3 tools/verify_fixture.py
+      - name: Validate the dashboard registry
+        run: python3 project.py dashboard
