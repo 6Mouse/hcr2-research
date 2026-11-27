@@ -10,7 +10,16 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
-FIXTURE = Path(__file__).resolve().parents[1] / 'fixtures' / 'arm64'
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = ROOT / 'fixtures' / 'arm64'
+
+
+def load_spec(directory):
+    toolchain = json.loads((ROOT / 'toolchain.json').read_text(encoding='utf-8'))
+    fixture = json.loads((directory / 'match.json').read_text(encoding='utf-8'))
+    if toolchain.keys() & fixture.keys():
+        raise ValueError('Fixture manifests may not override the shared toolchain')
+    return {**toolchain, **fixture}
 
 
 def default_ndk(package):
@@ -75,15 +84,18 @@ def verify(args, spec):
                 len(code) != spec['function_bytes'] or sha(code) != spec['function_sha256']):
             print('FAIL: reference build differs from the locked artifact.', file=sys.stderr)
             return 1
-        candidate_source = args.candidate or args.fixture / 'candidate.cpp'
-        _, candidate = compile_fixture(candidate_source, root / 'candidate', *compiler_tools, spec)
-        if candidate != code:
-            print(f'FAIL: candidate {len(candidate)} bytes, SHA-256 {sha(candidate)}', file=sys.stderr)
-            return 1
         _, control = compile_fixture(args.fixture / 'nonmatch.cpp', root / 'control',
                                      *compiler_tools, spec)
         if control == code:
             print('FAIL: negative control unexpectedly matches.', file=sys.stderr)
+            return 1
+        if args.reference_only:
+            print('PASS: reference hashes and negative control.')
+            return 0
+        candidate_source = args.candidate or args.fixture / 'candidate.cpp'
+        _, candidate = compile_fixture(candidate_source, root / 'candidate', *compiler_tools, spec)
+        if candidate != code:
+            print(f'FAIL: candidate {len(candidate)} bytes, SHA-256 {sha(candidate)}', file=sys.stderr)
             return 1
     print('PASS: repeated reference object, exact candidate function, and rejected negative control.')
     return 0
@@ -94,11 +106,12 @@ def main():
     parser.add_argument('--ndk', type=Path, help='Path to the pinned Android NDK')
     parser.add_argument('--fixture', type=Path, default=FIXTURE,
                         help='Directory containing match.json and the three fixture sources')
-    parser.add_argument('--candidate', type=Path,
-                        help='Compile this C++ source as the candidate instead of the supplied one')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--candidate', type=Path, help='Compile this C++ source as the candidate')
+    modes.add_argument('--reference-only', action='store_true', help='Verify an unsolved reference')
     args = parser.parse_args()
     try:
-        spec = json.loads((args.fixture / 'match.json').read_text(encoding='utf-8'))
+        spec = load_spec(args.fixture)
         print(f'Fixture: {spec["id"]} | Symbol: {spec["symbol"]}', flush=True)
         return verify(args, spec)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:

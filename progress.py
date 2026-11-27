@@ -21,20 +21,24 @@ def read_catalog(data, root=None):
             raise ValueError(f'{task}: invalid fixture symbol')
         if type(entry['bytes']) is not int or entry['bytes'] <= 0:
             raise ValueError(f'{task}: expected a positive byte count')
-        if not entry.get('matched_on'):
-            continue
-        if date.fromisoformat(entry['matched_on']).isoformat() != entry['matched_on']:
-            raise ValueError(f'{task}: expected a YYYY-MM-DD match date')
-        evidence = urlparse(entry['evidence'])
-        if evidence.scheme != 'https' or not evidence.hostname:
-            raise ValueError(f'{task}: a match needs HTTPS evidence')
-        folder = entry['fixture']
-        if not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', folder):
+        matched = entry.get('matched_on')
+        if matched:
+            if date.fromisoformat(matched).isoformat() != matched:
+                raise ValueError(f'{task}: expected a YYYY-MM-DD match date')
+            evidence = urlparse(entry['evidence'])
+            if evidence.scheme != 'https' or not evidence.hostname:
+                raise ValueError(f'{task}: a match needs HTTPS evidence')
+        folder = entry.get('fixture', '')
+        if (root is not None or matched or folder) and not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', folder):
             raise ValueError(f'{task}: invalid fixture directory')
         if root is not None:
-            manifest = json.loads((root / 'fixtures' / folder / 'match.json').read_text(encoding='utf-8'))
+            directory = root / 'fixtures' / folder
+            manifest = json.loads((directory / 'match.json').read_text(encoding='utf-8'))
             if (manifest['id'], manifest['symbol'], manifest['function_bytes']) != (task, entry['symbol'], entry['bytes']):
                 raise ValueError(f'{task}: catalog disagrees with its fixture manifest')
+            required = 'candidate.cpp' if matched else 'TASK.md'
+            if not (directory / required).is_file():
+                raise ValueError(f'{task}: missing {required}')
     return entries
 
 

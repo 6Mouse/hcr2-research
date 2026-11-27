@@ -1,0 +1,32 @@
+name: Assign one ARM64 fixture
+
+on:
+  issues:
+    types: [opened, closed, labeled]
+  push:
+    branches: [main]
+    paths: [function_catalog.json, tools/function_queue.py, .github/workflows/function-queue.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: function-assignments
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  assign:
+    if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'function-queue')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+      - name: Reconcile open requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m tools.function_queue

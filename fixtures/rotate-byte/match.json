@@ -1,0 +1,7 @@
+{
+  "id": "HCR2-006",
+  "symbol": "rotate_byte",
+  "function_bytes": 16,
+  "object_sha256": "0f86a724a4105019b2235b6877e5a67bcce26ecfed3cf0ac078b8128f55b5869",
+  "function_sha256": "08744c6231148266c490053ffd05cda3358a0e8a85a6742503a688b0fab9a7eb"
+}

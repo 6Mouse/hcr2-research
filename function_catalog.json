@@ -6,5 +6,7 @@
     "fixture": "arm64",
     "matched_on": "2026-11-28",
     "evidence": "https://github.com/6Mouse/hcr2-research/actions/runs/46080526754"
-  }
+  },
+  {"id":"HCR2-006","symbol":"rotate_byte","bytes":16,"fixture":"rotate-byte"},
+  {"id":"HCR2-007","symbol":"limit_score","bytes":12,"fixture":"limit-score"}
 ]

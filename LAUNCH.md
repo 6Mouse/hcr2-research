@@ -4,13 +4,15 @@ The starter can be prepared by one maintainer. It includes the source, the valid
 
 ## Share the project
 
-Share the [repository](https://github.com/6Mouse/hcr2-research) and [live progress dashboard](https://6mouse.github.io/hcr2-research/). GitHub Actions checks the starter and builds the dashboard on `main`. `python project.py check` also runs locally without game files or an NDK. Choose a license for the original tooling and documentation before collecting code for an open-source release.
+Share the [public repository](https://github.com/6Mouse/hcr2-research) and [live progress dashboard](https://6mouse.github.io/hcr2-research/). GitHub Actions checks the starter and builds the dashboard on `main`. `python project.py check` also runs locally without game files or an NDK. The repository does not include a project license.
 
 ## Invite the first contributor
 
 Send the repo link with this brief:
 
-> Clone the repo, run `python project.py check`, and pick one open task in `tasks.json`. Read `AGENTS.md`, claim the task in Issues, and work on a separate branch. For an enrolled ARM64 fixture, inspect its `match.json` and validate your candidate with `python tools/verify_fixture.py --fixture fixtures/<name> --candidate <candidate.cpp>`. Open a PR with the task ID, the exact command and its result. Use original code or reference material we have permission to rebuild and publish. Keep game assets and private inputs out of the PR.
+> Clone the repo and read `AGENTS.md` and `TOOLCHAIN.md`. Open **Request one ARM64 function** in Issues. Wait for the bot to assign one function and link its task packet. Write that function's `candidate.cpp` on a branch, run the exact verification command from the comment, and open a PR linking the claim and showing the result. Use only enrolled original or authorized references. Keep game assets and private inputs out of the PR.
+
+The queue assigns the smallest available unmatched fixture to the next eligible request. An open claim holds one function for its GitHub account. When a claim closes or the function is recorded as matched, that account can request another. If there is no work yet, leave the request open. Open a new request instead of reopening a released claim.
 
 Keep acceptance decisions in PRs. Enroll each function once in `function_catalog.json`, with its stable task ID, symbol, and exact reference size. Establish the target set up front so the percentages have a clear denominator. When a match passes the pinned checker and a maintainer accepts it, add its fixture directory, `matched_on` date, and verification URL to that entry. CI checks the manifest and candidate before deployment.
 

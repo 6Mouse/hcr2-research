@@ -32,8 +32,11 @@ jobs:
       - name: Check the reproducible build and exact function match
         run: |
           for manifest in fixtures/*/match.json; do
-            python3 tools/verify_fixture.py --fixture "${manifest%/match.json}" \
-              --ndk "$RUNNER_TEMP/android-ndk-r30-beta1"
+            fixture="${manifest%/match.json}"
+            args=()
+            if [[ ! -f "$fixture/candidate.cpp" ]]; then args+=(--reference-only); fi
+            python3 tools/verify_fixture.py --fixture "$fixture" \
+              --ndk "$RUNNER_TEMP/android-ndk-r30-beta1" "${args[@]}"
           done
       - name: Run the starter checks
         run: python3 project.py check
