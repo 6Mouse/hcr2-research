@@ -1,6 +1,10 @@
 name: ARM64 matching pilot
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,6 +25,10 @@ jobs:
           printf '%s  %s\n' 26b746e5a1e7ac3371f2a862a2f52a7c0740aa8a ndk.zip | sha1sum --check
           unzip -q ndk.zip
       - name: Check the reproducible build and exact function match
-        run: python3 tools/verify_fixture.py --ndk "$RUNNER_TEMP/android-ndk-r30-beta1"
+        run: |
+          for manifest in fixtures/*/match.json; do
+            python3 tools/verify_fixture.py --fixture "${manifest%/match.json}" \
+              --ndk "$RUNNER_TEMP/android-ndk-r30-beta1"
+          done
       - name: Validate the dashboard registry
         run: python3 project.py dashboard

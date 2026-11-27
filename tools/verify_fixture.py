@@ -66,7 +66,7 @@ def verify(args, spec):
     print('Flags:', ' '.join(spec['flags']), flush=True)
     with TemporaryDirectory(prefix='arm64-match-') as temp:
         root = Path(temp)
-        ref_source = FIXTURE / 'reference.cpp'
+        ref_source = args.fixture / 'reference.cpp'
         reference, code = compile_fixture(ref_source, root / 'reference', *compiler_tools, spec)
         repeat, _ = compile_fixture(ref_source, root / 'repeat', *compiler_tools, spec)
         print(f'Reference object SHA-256: {sha(reference)}', flush=True)
@@ -75,11 +75,13 @@ def verify(args, spec):
                 len(code) != spec['function_bytes'] or sha(code) != spec['function_sha256']):
             print('FAIL: reference build differs from the locked artifact.', file=sys.stderr)
             return 1
-        _, candidate = compile_fixture(args.candidate, root / 'candidate', *compiler_tools, spec)
+        candidate_source = args.candidate or args.fixture / 'candidate.cpp'
+        _, candidate = compile_fixture(candidate_source, root / 'candidate', *compiler_tools, spec)
         if candidate != code:
             print(f'FAIL: candidate {len(candidate)} bytes, SHA-256 {sha(candidate)}', file=sys.stderr)
             return 1
-        _, control = compile_fixture(FIXTURE / 'nonmatch.cpp', root / 'control', *compiler_tools, spec)
+        _, control = compile_fixture(args.fixture / 'nonmatch.cpp', root / 'control',
+                                     *compiler_tools, spec)
         if control == code:
             print('FAIL: negative control unexpectedly matches.', file=sys.stderr)
             return 1
@@ -90,10 +92,15 @@ def verify(args, spec):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ndk', type=Path, help='Path to the pinned Android NDK')
-    parser.add_argument('--candidate', type=Path, default=FIXTURE / 'candidate.cpp',
+    parser.add_argument('--fixture', type=Path, default=FIXTURE,
+                        help='Directory containing match.json and the three fixture sources')
+    parser.add_argument('--candidate', type=Path,
                         help='Compile this C++ source as the candidate instead of the supplied one')
+    args = parser.parse_args()
     try:
-        return verify(parser.parse_args(), json.loads((FIXTURE / 'match.json').read_text(encoding='utf-8')))
+        spec = json.loads((args.fixture / 'match.json').read_text(encoding='utf-8'))
+        print(f'Fixture: {spec["id"]} | Symbol: {spec["symbol"]}', flush=True)
+        return verify(args, spec)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         print(f'Unable to check fixture: {exc}', file=sys.stderr)
         return 2

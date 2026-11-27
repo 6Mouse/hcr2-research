@@ -35,7 +35,9 @@ python tools/verify_fixture.py
 
 Use `--ndk <directory>` if the NDK is outside the normal SDK path. The verifier checks the compiler identity, builds the reference twice, checks the pinned object and function hashes, and compares the candidate's function bytes. A deliberately different implementation must fail the byte comparison. To try your own source, pass `--candidate <file.cpp>`. The candidate must export the C symbol `hcr2_fixture` with the signature in `fixtures/arm64/reference.cpp`.
 
-`fixtures/arm64/match.json` records the task ID, compiler and target flags, symbol, byte count and reference hashes. For another authorized, self-contained fixture, use the same structure and record any shared declarations alongside it. The pilot compiler and flags are fixture settings only. The command checks an isolated relocation-free function and does not infer original HCR2 build settings or compare a linked APK. A reviewer can run the command on another machine and attach the output to the PR. CI also runs the pilot on Linux without the game archive.
+`fixtures/arm64/match.json` records the task ID, compiler and target flags, symbol, byte count and reference hashes. To add another authorized, self-contained fixture on this NDK, create a directory under `fixtures/` with `match.json`, `reference.cpp`, `candidate.cpp`, and `nonmatch.cpp`, and assign it a stable ID in the work queue. Run `python tools/verify_fixture.py --fixture <directory>`. CI checks every fixture directory with a manifest.
+
+The compiler and flags are fixture settings only. The verifier checks an isolated relocation-free function. A reviewer can run the command on another machine and attach the output to the PR. CI also runs the check on Linux without the game archive.
 
 ## Share the project
 
