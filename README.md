@@ -2,6 +2,8 @@
 
 Community work queue for offline observations and verification tools. The first milestone is an independently verified Android ARM64 1.76.1 reference. Build checks can compare contributor-owned artifacts byte for byte. The stock APK stays local to each contributor.
 
+[Live progress dashboard](https://6mouse.github.io/hcr2-research/) · [Work queue](tasks.json) · [Contributor and Discord setup](LAUNCH.md)
+
 ## Start here
 
 Clone this repository and run `python project.py check` from its root with Python 3.10 or newer. It checks the comparer, archive verifier and replay fixture, then builds `dist/index.html`. This command needs no APK, NDK, or credentials. Open the dashboard or read [the work queue](tasks.json) to pick a task.
@@ -43,6 +45,6 @@ The compiler and flags are fixture settings only. The verifier checks an isolate
 
 ## Share the project
 
-See [the launch checklist](LAUNCH.md) for release and sharing steps. The baseline APK, local outputs, and historical research stay outside the project files.
+See [the launch checklist](LAUNCH.md) for a copy-paste agent brief, match review rules, and Discord setup. The baseline APK, local outputs, and historical research stay outside the repository.
 
 Unofficial project. Hill Climb Racing 2 is used to identify the subject of the research.

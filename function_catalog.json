@@ -1,0 +1,10 @@
+[
+  {
+    "id": "HCR2-005",
+    "symbol": "hcr2_fixture",
+    "bytes": 16,
+    "fixture": "arm64",
+    "matched_on": "2026-11-28",
+    "evidence": "https://github.com/6Mouse/hcr2-research/actions/runs/46080526754"
+  }
+]

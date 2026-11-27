@@ -12,6 +12,8 @@ from tempfile import SpooledTemporaryFile
 from urllib.parse import urlparse
 from zipfile import BadZipFile, ZipFile
 
+from progress import CATALOG, read_catalog, totals
+
 ROOT = Path(__file__).resolve().parent
 BLOCK = 1024 * 1024
 
@@ -116,8 +118,40 @@ def dashboard(baseline):
         page = page.replace('%%' + key + '%%', value)
     output = ROOT / 'dist' / 'index.html'
     output.parent.mkdir(exist_ok=True)
+    catalog = read_catalog((ROOT / CATALOG).read_text(encoding='utf-8'), ROOT)
+    metrics = totals(catalog)
+    (output.parent / 'progress.json').write_text(json.dumps({
+        'scope': 'original-arm64-fixtures', 'game_progress': None,
+        **metrics, 'functions': catalog,
+    }, indent=2) + '\n', encoding='utf-8')
+    page = page.replace('%%PROGRESS%%', render_progress(catalog, metrics))
     output.write_text(page, encoding='utf-8')
     print(output)
+
+
+def render_progress(catalog, metrics):
+    def measure(label, done, total, display):
+        percent = f'{done / total:.1%}' if total else 'No target yet'
+        bar = (f'<progress aria-label="{label}" value="{done}" max="{total}"></progress>'
+               if total else '')
+        return (f'<article><div class="measure"><b>{label}</b><span>{percent}</span></div>'
+                f'<strong>{display}</strong>{bar}</article>')
+
+    done, total = metrics['matched_functions'], metrics['total_functions']
+    size, extent = metrics['matched_bytes'], metrics['total_bytes']
+    match_rows = []
+    for entry in sorted(catalog, key=lambda row: row.get('matched_on') or '', reverse=True):
+        if entry.get('matched_on'):
+            url = escape(entry['evidence'], quote=True)
+            match_rows.append(f'<li><code>{escape(entry["symbol"])}</code> '
+                              f'<span>{entry["bytes"]:,} bytes · {entry["matched_on"]} · '
+                              f'<a href="{url}">Evidence</a></span></li>')
+    return (measure('Functions matched', done, total, f'{done:,} / {total:,}') +
+            measure('Machine code matched', size, extent,
+                    f'{size / 1_000_000:,.6f} / {extent / 1_000_000:,.6f} MB '
+                    f'<small>{size:,} / {extent:,} bytes</small>') +
+            '<div class="matches"><h3>Recent exact matches</h3><ul>' +
+            (''.join(match_rows[:10]) or '<li>No verified matches yet.</li>') + '</ul></div>')
 
 
 def main():
