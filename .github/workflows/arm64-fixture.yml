@@ -38,31 +38,42 @@ jobs:
       - name: Run the starter checks
         run: python3 project.py check
 
-  dashboard:
+  dashboard-build:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: arm64-fixture
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact: ${{ steps.artifact-name.outputs.value }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: python3 project.py dashboard
+      - id: artifact-name
+        run: echo "value=github-pages-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          name: ${{ steps.artifact-name.outputs.value }}
+          path: dist
+
+  dashboard:
+    needs: dashboard-build
     runs-on: ubuntu-24.04
     concurrency:
       group: github-pages
       cancel-in-progress: false
     permissions:
-      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
-      - run: python3 project.py dashboard
-      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
-        with:
-          path: dist
       - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         id: deploy
+        with:
+          artifact_name: ${{ needs.dashboard-build.outputs.artifact }}
 
   discord:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.test_discord)
