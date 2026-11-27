@@ -15,9 +15,10 @@
     "-fno-stack-protector",
     "-fno-unwind-tables",
     "-fno-asynchronous-unwind-tables",
-    "-ffunction-sections"
+    "-ffunction-sections",
+    "-fno-ident"
   ],
-  "object_sha256": "a381cfc366602af9bfb59fac09660080103d813029592833a9add70656b2a7d2",
+  "object_sha256": "e19f1094db49646879c097e4c9b57e29a8388f2e5f35f4197094d9dad606e8f9",
   "function_bytes": 16,
   "function_sha256": "275b8f9d9110681e011ad1f951aa3c3713104bf7de9b163bbd1377615158597f"
 }
