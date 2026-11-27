@@ -117,6 +117,8 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     verify = commands.add_parser('verify-release', help='Verify the original base and ARM64 split in a local APKS archive')
     verify.add_argument('archive', type=Path)
+    verify.add_argument('--exact-archive', action='store_true',
+                        help='Also require the entire archive to match the shared fingerprint')
     diff = commands.add_parser('compare', help='Compare two local artifacts byte for byte')
     diff.add_argument('reference', type=Path)
     diff.add_argument('candidate', type=Path)
@@ -129,6 +131,8 @@ def main():
             return 0
         report = (compare(args.reference, args.candidate) if args.command == 'compare'
                   else verify_release(args.archive, baseline))
+        if args.command == 'verify-release' and args.exact_archive:
+            report['match'] = report['match'] and report['archive_match']
         print(json.dumps(report, indent=2))
         return 0 if report['match'] else 1
     except (OSError, BadZipFile, KeyError, ValueError) as exc:

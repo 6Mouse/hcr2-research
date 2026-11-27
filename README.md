@@ -4,10 +4,12 @@ Community work queue for offline observations and verification tools. The first 
 
 ## Start here
 
-Requires Python 3.10 or newer. Use your local original split archive. The verifier checks the base APK, ARM64 split and packaged engine bytes separately from the outer archive hash. A different ZIP wrapper can contain identical signed splits.
+Requires Python 3.10 or newer. Use the [shared HCR2 1.76.1 split archive on Google Drive](https://drive.google.com/file/d/1Df8zMPtGU62bngYAISfYo0ktUJVTL32F/view?usp=sharing). Keep it outside Git. The expected SHA-256 for the full archive is `62c5269ef6a52fc372b689cbe74a017ec595d7ddf0f791a04d9550ac07b33669`.
+
+Use `--exact-archive` before starting a task. It checks the full archive and the base APK, ARM64 split, and engine inside it. Google Drive currently returns a download quota error, so the Drive copy still needs its hash checked against the verified local reference. If the download or verification fails, report that in the task issue.
 
 ```powershell
-python project.py verify-release .\local-output\HCR2-1.76.1-Original-Splits.apks
+python project.py verify-release --exact-archive '.\local-output\Hill Climb Racing 2 1.76.1 @Lan9118.apks'
 python project.py compare .\local-output\reference.o .\local-output\rebuilt.o
 python project.py dashboard
 ```
