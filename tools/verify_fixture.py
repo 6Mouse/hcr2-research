@@ -1,4 +1,4 @@
-"""Compile and check the original HCR2-005 ARM64 fixture."""
+"""Compile and check an enrolled original ARM64 fixture."""
 import argparse
 import hashlib
 import json
@@ -12,6 +12,18 @@ from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'fixtures' / 'arm64'
+
+
+def find_function(identifier):
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from progress import CATALOG, read_catalog
+
+    catalog = read_catalog((ROOT / CATALOG).read_text(encoding='utf-8'), ROOT)
+    for entry in catalog:
+        if entry['id'] == identifier:
+            return ROOT / 'fixtures' / entry['fixture']
+    raise ValueError(f'Unknown function ID {identifier}. See function_catalog.json.')
 
 
 def load_spec(directory):
@@ -99,19 +111,24 @@ def verify(args, spec):
             print(f'FAIL: candidate {len(candidate)} bytes, SHA-256 {sha(candidate)}', file=sys.stderr)
             return 1
     print('PASS: repeated reference object, exact candidate function, and rejected negative control.')
+    print(f'MATCH [{spec["id"]}] {spec["symbol"]} .text.{spec["symbol"]} '
+          f'{len(code)} bytes SHA-256 {sha(code)}')
     return 0
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ndk', type=Path, help='Path to the pinned Android NDK')
-    parser.add_argument('--fixture', type=Path, default=FIXTURE,
-                        help='Directory containing match.json and the three fixture sources')
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument('--function', help='Stable ID from function_catalog.json')
+    target.add_argument('--fixture', type=Path,
+                        help='Directory containing match.json and fixture sources')
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('--candidate', type=Path, help='Compile this C++ source as the candidate')
     modes.add_argument('--reference-only', action='store_true', help='Verify an unsolved reference')
     args = parser.parse_args()
     try:
+        args.fixture = find_function(args.function) if args.function else (args.fixture or FIXTURE)
         spec = load_spec(args.fixture)
         print(f'Fixture: {spec["id"]} | Symbol: {spec["symbol"]}', flush=True)
         return verify(args, spec)

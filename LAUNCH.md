@@ -10,11 +10,25 @@ Share the [public repository](https://github.com/6Mouse/hcr2-research) and [live
 
 Send the repo link with this brief:
 
-> Clone the repo and read `AGENTS.md` and `TOOLCHAIN.md`. Open **Request one ARM64 function** in Issues. Wait for the bot to assign one function and link its task packet. Write that function's `candidate.cpp` on a branch, run the exact verification command from the comment, and open a PR linking the claim and showing the result. Use only enrolled original or authorized references. Keep game assets and private inputs out of the PR.
+> Clone the repo and read `AGENTS.md` and `TOOLCHAIN.md`. Pick any open function in `function_catalog.json` and read its fixture's `TASK.md`. Write `candidate.cpp`, verify it with `python -m tools.verify_fixture --function HCR2-NNN`, and open a PR titled `[HCR2-NNN] Match <symbol>`. Include the path to `match.json`, your command and the `MATCH` line. Use only enrolled original or authorized references. Keep game binaries, assets and private inputs out of the PR.
 
-The queue assigns the smallest available unmatched fixture to the next eligible request. An open claim holds one function for its GitHub account. When a claim closes or the function is recorded as matched, that account can request another. If there is no work yet, leave the request open. Open a new request instead of reopening a released claim.
+Agents can work on the same function in parallel. Submit one function per PR so its evidence and review are easy to find. The catalog and fixture manifests give everyone the same identifiers and reference fingerprints.
 
-Keep acceptance decisions in PRs. Enroll each function once in `function_catalog.json`, with its stable task ID, symbol, and exact reference size. Establish the target set up front so the percentages have a clear denominator. When a match passes the pinned checker and a maintainer accepts it, add its fixture directory, `matched_on` date, and verification URL to that entry. CI checks the manifest and candidate before deployment.
+### Record an accepted match
+
+Review the tagged PR and merge its candidate after the ARM64 check passes. As the repository owner, check out and update `main`, then run the commands below with the submitted ID and the URL to the reviewed PR or verification run.
+
+```powershell
+git switch main
+git pull --ff-only
+python -m tools.record_match HCR2-006 --evidence 'https://github.com/6Mouse/hcr2-research/pull/123'
+git diff -- function_catalog.json
+git add function_catalog.json
+git commit -m "Record verified match HCR2-006"
+git push origin main
+```
+
+The command recompiles the checked-in candidate and records the date and evidence after an exact match. It writes the local catalog only. Add `--ndk <directory>` if needed. GitHub Actions rebuilds the fixtures before publishing the updated progress. Contributor PRs that edit the progress catalog fail the submission check.
 
 The dashboard calculates `matched_functions / total_functions` and `matched_bytes / total_bytes` separately. It displays decimal MB (1 MB = 1,000,000 bytes) and exact byte counts. Scope is original ARM64 fixtures. The shipped game's progress remains unmeasured.
 

@@ -12,11 +12,13 @@
 </style>
 <main>
 <header><div class="eyebrow">ANDROID REFERENCE · %%BASELINE%%</div><h1>HCR2 Research</h1><p>A shared queue for reproducible offline research and artifact checks.</p><details><summary>Reference split archive fingerprint</summary><code>%%HASH%%</code></details></header>
-<section class="scope"><h2>Original ARM64 fixture progress</h2><p>These totals cover the enrolled pilot fixtures. Shipped-game progress is unmeasured. <a href="https://github.com/6Mouse/hcr2-research/issues/new?template=function.yml">Request one function</a> · <a href="progress.json">Progress data</a> · <a href="https://github.com/6Mouse/hcr2-research">Repository</a></p><div class="metrics">%%PROGRESS%%</div></section>
+<section class="scope"><h2>Original ARM64 fixture progress</h2><p>These totals cover the enrolled pilot fixtures. Shipped-game progress is unmeasured. <a href="#function-catalog">Browse functions</a> · <a href="progress.json">Progress data</a> · <a href="https://github.com/6Mouse/hcr2-research">Repository</a></p><div class="metrics">%%PROGRESS%%</div></section>
+<section class="scope" id="function-catalog"><h2>Function catalog</h2><p>Choose any open function. Run the byte checker and submit your candidate in a pull request. The repository owner records verified matches.</p>
+<div class="table"><table><thead><tr><th scope="col">ID</th><th scope="col">ELF symbol and section</th><th scope="col">Bytes</th><th scope="col">Status</th><th scope="col">Files</th></tr></thead><tbody>%%FUNCTIONS%%</tbody></table></div></section>
 <section class="cards" aria-label="Task totals">%%CARDS%%</section>
 <section><div class="toolbar"><h2>Work queue</h2><label>Status <select id="status"><option value="">All tasks</option><option>open</option><option>claimed</option><option>in review</option><option>verified</option></select></label></div>
 <div class="table"><table><thead><tr><th scope="col">ID</th><th scope="col">Task and acceptance criteria</th><th scope="col">Area</th><th scope="col">Status</th><th scope="col">Evidence</th></tr></thead><tbody>%%ROWS%%<tr id="empty" hidden><td colspan="5">No tasks in this status.</td></tr></tbody></table></div></section>
-<footer>Claim a task in the project’s issue tracker. Verified entries have a separate reproduction and review record.</footer>
+<footer>Use the issue tracker to claim a research task. Function matching is open to everyone.</footer>
 </main>
 <script>
 const status = document.querySelector('#status');

@@ -21,7 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Check contributor submission scope
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 -m tools.check_submission "$BASE_SHA" "$GITHUB_SHA"
       - name: Install pinned Android NDK
         working-directory: ${{ runner.temp }}
         run: |

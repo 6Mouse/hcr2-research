@@ -1,11 +1,11 @@
-Task ID and claim issue:
+Function submissions use `[HCR2-NNN] Match <symbol>` as the PR title.
 
-Baseline SHA-256 and toolchain:
+Function ID and path to `match.json` or research task ID and claim issue:
 
-Reproduction commands and results:
+Reproduction command and results (paste the `MATCH` line for a function):
 
-- [ ] Changes are limited to the claimed task.
+- [ ] Changes are limited to one enrolled `candidate.cpp` or one research task.
 - [ ] Inputs are synthetic, redistributable, or kept local.
 - [ ] A reviewer can reproduce the result without account data or a private endpoint.
 
-Maintainer review evidence and independent reviewer:
+Maintainer review evidence (owner fills this in for research tasks):

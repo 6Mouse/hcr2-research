@@ -2,7 +2,7 @@
 
 Community work queue for offline observations and verification tools. The first milestone is an independently verified Android ARM64 1.76.1 reference. Build checks can compare contributor-owned artifacts byte for byte. The stock APK stays local to each contributor.
 
-[Live progress dashboard](https://6mouse.github.io/hcr2-research/) · [Request one ARM64 function](https://github.com/6Mouse/hcr2-research/issues/new?template=function.yml) · [Shared toolchain](TOOLCHAIN.md) · [Contributor and Discord setup](LAUNCH.md)
+[Live progress dashboard](https://6mouse.github.io/hcr2-research/) · [Browse functions](https://6mouse.github.io/hcr2-research/#function-catalog) · [Shared toolchain](TOOLCHAIN.md) · [Contributor and Discord setup](LAUNCH.md)
 
 ## Start here
 
@@ -22,10 +22,11 @@ For artifact comparisons, run `python project.py compare <reference> <candidate>
 
 ## Contribute with an agent
 
-1. For function matching, open **Request one ARM64 function** and wait for the assignment. For other research, pick an open ID in `tasks.json` and use the research claim form.
-2. Give your agent the ID and `AGENTS.md`. Work on a separate branch or fork.
-3. Run `python project.py check`. Submit a small PR that links the claim and contains exact reproduction steps.
-4. A maintainer reviews the PR and records separate reproduction evidence. Only reviewed, reproduced work counts as verified on the dashboard.
+1. Choose any open function in the [catalog](function_catalog.json). You can start immediately, even if someone else is working on the same function. For other research, choose an open ID in `tasks.json` and use the research claim form.
+2. Give your agent the ID, `AGENTS.md` and the fixture's `TASK.md`. Work on a separate branch or fork.
+3. Put the solution in the fixture's `candidate.cpp`. From the repo root run `python -m tools.verify_fixture --function HCR2-NNN` with your ID, then run `python project.py check`.
+4. Open a PR titled `[HCR2-NNN] Match <symbol>` with the `match.json` path, the exact command and its `MATCH` line. That line includes the stable ID, ELF symbol and section, byte count, and code SHA-256. CI repeats the byte check with the pinned compiler.
+5. The repository owner reviews the results and records each accepted match. That separate step updates the verified pool and the dashboard.
 
 The workflow follows the shared queues and independently checked progress of [Fallout 3 Decomp](https://f3decomp.com/how) and [Fallout: New Vegas Decomp](https://fnvdecomp.com/how). The dashboard counts verified research tasks. An exact artifact match is recorded as test evidence, and the dashboard makes no claim about percentage of the game reconstructed.
 
@@ -34,12 +35,12 @@ The workflow follows the shared queues and independently checked progress of [Fa
 HCR2-005 uses a small original C++ function. Install Android NDK `27.3.13750724` with Android Studio or `sdkmanager --install "ndk;27.3.13750724"`. Then run:
 
 ```powershell
-python tools/verify_fixture.py
+python -m tools.verify_fixture --function HCR2-005
 ```
 
 Use `--ndk <directory>` if the NDK is outside the normal SDK path. The verifier checks the compiler identity, builds the reference twice, checks the pinned object and function hashes, and compares the candidate's function bytes. A deliberately different implementation must fail the byte comparison. To try your own source, pass `--candidate <file.cpp>`. The candidate must export the C symbol `hcr2_fixture` with the signature in `fixtures/arm64/reference.cpp`.
 
-`toolchain.json` records the compiler and target flags for all fixtures. Each `match.json` records the task ID, symbol, byte count, and reference hashes. To enroll another original or authorized, self-contained fixture, create a directory under `fixtures/` with `match.json`, `reference.cpp`, `nonmatch.cpp`, and `TASK.md`. Add the stable ID to the work queue and function catalog. CI checks the locked reference first and checks `candidate.cpp` once submitted.
+`toolchain.json` records the compiler and target flags for all fixtures. Each `match.json` records the task ID, symbol, byte count, and reference hashes. To enroll another original or authorized, self-contained fixture, propose a directory under `fixtures/` with `match.json`, `reference.cpp`, `nonmatch.cpp`, and `TASK.md`. The owner adds the stable ID to the function catalog. CI checks the locked reference first and checks `candidate.cpp` once submitted.
 
 The compiler and flags are fixture settings only. The verifier checks an isolated relocation-free function. `-fno-ident` omits the host-specific compiler identification string from the object. The verifier still checks and prints the pinned compiler identity. A reviewer can run the command on another machine and attach the output to the PR. CI also runs the check on Linux without the game archive.
 

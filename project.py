@@ -125,6 +125,7 @@ def dashboard(baseline):
         **metrics, 'functions': catalog,
     }, indent=2) + '\n', encoding='utf-8')
     page = page.replace('%%PROGRESS%%', render_progress(catalog, metrics))
+    page = page.replace('%%FUNCTIONS%%', render_functions(catalog))
     output.write_text(page, encoding='utf-8')
     print(output)
 
@@ -152,6 +153,24 @@ def render_progress(catalog, metrics):
                     f'<small>{size:,} / {extent:,} bytes</small>') +
             '<div class="matches"><h3>Recent exact matches</h3><ul>' +
             (''.join(match_rows[:10]) or '<li>No verified matches yet.</li>') + '</ul></div>')
+
+
+def render_functions(catalog):
+    rows = []
+    source = 'https://github.com/6Mouse/hcr2-research/blob/main/fixtures'
+    for entry in catalog:
+        fixture = escape(entry['fixture'])
+        symbol = escape(entry['symbol'])
+        if entry.get('matched_on'):
+            status = f'<a href="{escape(entry["evidence"], quote=True)}">Verified</a> · {entry["matched_on"]}'
+            instructions = f'<a href="{source}/{fixture}/candidate.cpp">Accepted source</a>'
+        else:
+            status = 'Open'
+            instructions = f'<a href="{source}/{fixture}/TASK.md">Instructions</a>'
+        rows.append(f'<tr><td><code>{entry["id"]}</code></td><td><code>{symbol}</code>'
+                    f'<small>.text.{symbol}</small></td><td>{entry["bytes"]:,}</td><td>{status}</td>'
+                    f'<td><a href="{source}/{fixture}/match.json">Reference</a> · {instructions}</td></tr>')
+    return '\n'.join(rows) or '<tr><td colspan="5">No enrolled functions.</td></tr>'
 
 
 def main():
