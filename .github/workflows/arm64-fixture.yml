@@ -27,7 +27,7 @@ jobs:
     outputs:
       approvals: ${{ steps.find-matches.outputs.approvals }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -68,13 +68,14 @@ jobs:
     if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: arm64-fixture
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: write
     outputs:
       revision: ${{ steps.publish.outputs.revision }}
       promoted: ${{ steps.publish.outputs.promoted }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: ${{ needs.arm64-fixture.outputs.approvals != '' && needs.arm64-fixture.outputs.approvals != '{}' }}
       - name: Publish the verified catalog
@@ -114,14 +115,14 @@ jobs:
     outputs:
       artifact: ${{ steps.artifact-name.outputs.value }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.publish-catalog.outputs.revision }}
           persist-credentials: false
       - run: python3 project.py dashboard
       - id: artifact-name
         run: echo "value=github-pages-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           name: ${{ steps.artifact-name.outputs.value }}
           path: dist
@@ -140,7 +141,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deploy
         with:
           artifact_name: ${{ needs.dashboard-build.outputs.artifact }}
@@ -150,7 +151,7 @@ jobs:
     needs: publish-catalog
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.publish-catalog.outputs.revision }}
           fetch-depth: 0
