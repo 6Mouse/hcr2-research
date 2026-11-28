@@ -1,5 +1,6 @@
 import unittest
 
+from tools.accept_match import candidate_from_pr
 from tools.check_submission import validate
 
 
@@ -22,3 +23,14 @@ class SubmissionTests(unittest.TestCase):
                 validate({self.candidate, extra}, self.catalog)
         with self.assertRaises(ValueError):
             validate({'fixtures/unknown/candidate.cpp'}, self.catalog)
+
+    def test_owner_publication_requires_a_merged_tagged_candidate(self):
+        catalog = [{'id': 'HCR2-006', 'fixture': 'rotate-byte'}]
+        pr = {'state': 'MERGED', 'baseRefName': 'main', 'mergeCommit': {'oid': 'merge-sha'},
+              'title': '[HCR2-006] Match rotate_byte', 'files': [{'path': self.candidate}]}
+        self.assertEqual(candidate_from_pr(pr, catalog), ('HCR2-006', self.candidate))
+        for change in ({'state': 'OPEN'}, {'baseRefName': 'test'},
+                       {'title': '[HCR2-007] Match rotate_byte'},
+                       {'files': [*pr['files'], {'path': 'toolchain.json'}]}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                candidate_from_pr({**pr, **change}, catalog)

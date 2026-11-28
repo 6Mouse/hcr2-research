@@ -16,19 +16,15 @@ Agents can work on the same function in parallel. Submit one function per PR so 
 
 ### Record an accepted match
 
-Review the tagged PR and merge its candidate after the ARM64 check passes. As the repository owner, check out and update `main`, then run the commands below with the submitted ID and the URL to the reviewed PR or verification run.
+Review the tagged PR and merge its candidate after the ARM64 check passes. As the repository owner, authenticate GitHub CLI and run this from a clean checkout on `main`, replacing `123` with the merged PR number.
 
 ```powershell
-git switch main
-git pull --ff-only
-python -m tools.record_match HCR2-006 --evidence 'https://github.com/6Mouse/hcr2-research/pull/123'
-git diff -- function_catalog.json
-git add function_catalog.json
-git commit -m "Record verified match HCR2-006"
-git push origin main
+python -m tools.accept_match 123
 ```
 
-The command recompiles the checked-in candidate and records the date and evidence after an exact match. It writes the local catalog only. Add `--ndk <directory>` if needed. GitHub Actions rebuilds the fixtures before publishing the updated progress. Contributor PRs that edit the progress catalog fail the submission check.
+The command checks your GitHub identity, confirms that the PR changed only its tagged candidate, and checks that `main` still contains the reviewed file. It fast-forwards the local `main` if needed, verifies the exact bytes with the pinned NDK, records the PR as evidence, and commits and pushes the catalog update. GitHub Actions publishes the dashboard and sends a Discord notice if a webhook is configured. Add `--ndk <directory>` if the NDK lives outside the default path. Contributor PRs that edit the progress catalog fail the submission check.
+
+For local-only recording, run `python -m tools.record_match HCR2-006 --evidence 'https://github.com/6Mouse/hcr2-research/pull/123'` with the reviewed function ID and evidence URL.
 
 The dashboard calculates `matched_functions / total_functions` and `matched_bytes / total_bytes` separately for the test fixtures. It displays decimal MB (1 MB = 1,000,000 bytes) and exact byte counts. The shipped libraries have a separate [metadata inventory](release_inventory.json) derived from the pinned archive. The shipped game's progress remains unmeasured.
 

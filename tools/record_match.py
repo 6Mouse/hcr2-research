@@ -38,7 +38,7 @@ def record_match(identifier, evidence, matched_on, ndk):
         temp.replace(catalog_path)
     finally:
         temp.unlink(missing_ok=True)
-    print(f'Recorded {identifier} in {CATALOG}. Review and commit the change to publish it.')
+    print(f'Recorded {identifier} in {CATALOG}.')
     return 0
 
 
@@ -50,7 +50,10 @@ def main():
     parser.add_argument('--ndk', type=Path, help='Path to the pinned Android NDK')
     args = parser.parse_args()
     try:
-        return record_match(args.function, args.evidence, args.date, args.ndk)
+        result = record_match(args.function, args.evidence, args.date, args.ndk)
+        if result == 0:
+            print('Review and commit the change to publish it.')
+        return result
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         print(f'Unable to record match: {exc}', file=sys.stderr)
         return 2
