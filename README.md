@@ -28,6 +28,8 @@ python -m tools.release_inventory 'C:\path\to\downloaded.apks' --output release_
 
 For artifact comparisons, run `python project.py compare <reference> <candidate>`. It exits 1 on a byte difference and reports both SHA-256 values, file sizes and the first differing byte offset. Save the output, toolchain version and compiler flags as evidence.
 
+The [historical reference](HISTORICAL_REFERENCE.md) reproduces a four-byte upstream Cocos2d-x accessor inside the original 1.7.0 ARMv7 library. Its scope and progress totals are separate from 1.76.1. Follow the [agent guidance](AGENTS.md) when giving functions or variables provisional names.
+
 ## Contribute with an agent
 
 1. Choose any open test fixture in the [fixture catalog](function_catalog.json). You can start immediately, even if someone else is working on the same function. For other research, choose an open ID in `tasks.json` and use the research claim form.

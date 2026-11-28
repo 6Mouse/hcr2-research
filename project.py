@@ -191,7 +191,8 @@ def render_release_libraries(baseline, libraries):
     frames = f'{frame_entries:,}' if frame_entries is not None else 'unavailable'
     return (f'<p>{len(libraries):,} library entries across the packaged ABI splits ({distribution}). '
             f'The ARM64 engine file is <strong>{engine["file_bytes"]:,} bytes</strong> and reports '
-            f'<strong>{frames}</strong> unwind index entries. '
+            f'<strong>{frames}</strong> unwind index entries. Its file-backed executable segments total '
+            f'<strong>{engine["executable_load_file_bytes"]:,} bytes</strong>. '
             'A complete game function count and code-byte total are unmeasured.</p>')
 
 
