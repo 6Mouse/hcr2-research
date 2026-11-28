@@ -14,15 +14,19 @@ Send the repo link with this brief:
 
 Agents can work on the same function in parallel. Submit one function per PR so its evidence and review are easy to find. The catalog and fixture manifests give everyone the same identifiers and reference fingerprints.
 
-### Record an accepted match
+### Review and merge a match
 
-Review the tagged PR and merge its candidate after the ARM64 check passes. As the repository owner, authenticate GitHub CLI and run this from a clean checkout on `main`, replacing `123` with the merged PR number.
+Review the tagged PR as the repository owner and squash merge it after the ARM64 check passes. If GitHub asks for approval to run a first-time contributor's checks, review the changed files before approving that run. Merging is the approval that counts toward progress.
+
+GitHub Actions rebuilds `main` with the pinned NDK, checks that GitHub recorded the owner as the merger, and checks that the reviewed PR changed only the tagged `candidate.cpp`. A verified candidate becomes a catalog entry with the PR as evidence. The same run publishes the dashboard and sends a Discord notice if configured. One run can reconcile several pending owner merges. Each function counts once.
+
+An ordinary push records matches when their PR evidence is available. To retry discovery, run **ARM64 matching pilot** on `main` with **test_discord** off. For a verified merge that the workflow cannot link to its PR, authenticate GitHub CLI as the owner and use the recovery command below from a clean checkout on `main`. Replace `123` with the merged PR number.
 
 ```powershell
 python -m tools.accept_match 123
 ```
 
-The command checks your GitHub identity, confirms that the PR changed only its tagged candidate, and checks that `main` still contains the reviewed file. It fast-forwards the local `main` if needed, verifies the exact bytes with the pinned NDK, records the PR as evidence, and commits and pushes the catalog update. GitHub Actions publishes the dashboard and sends a Discord notice if a webhook is configured. Add `--ndk <directory>` if the NDK lives outside the default path. Contributor PRs that edit the progress catalog fail the submission check.
+The recovery command also verifies the exact bytes before publishing. Add `--ndk <directory>` if needed. Contributor PRs that edit the progress catalog fail the submission check.
 
 For local-only recording, run `python -m tools.record_match HCR2-006 --evidence 'https://github.com/6Mouse/hcr2-research/pull/123'` with the reviewed function ID and evidence URL.
 

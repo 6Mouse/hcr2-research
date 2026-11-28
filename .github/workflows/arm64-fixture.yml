@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       test_discord:
@@ -13,11 +14,18 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+
+concurrency:
+  group: arm64-matching-${{ github.ref }}
+  queue: max
 
 jobs:
   arm64-fixture:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
+    outputs:
+      approvals: ${{ steps.find-matches.outputs.approvals }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -27,7 +35,8 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python3 -m tools.check_submission "$BASE_SHA" "$GITHUB_SHA"
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 -m tools.check_submission "$BASE_SHA" "$GITHUB_SHA" --title="$PR_TITLE"
       - name: Install pinned Android NDK
         working-directory: ${{ runner.temp }}
         run: |
@@ -46,16 +55,68 @@ jobs:
           done
       - name: Run the starter checks
         run: python3 project.py check
+      - name: Find owner-approved matches
+        id: find-matches
+        if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.test_discord
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          approvals=$(python3 -m tools.automatic_matches discover)
+          printf 'approvals=%s\n' "$approvals" >> "$GITHUB_OUTPUT"
+
+  publish-catalog:
+    if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: arm64-fixture
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      revision: ${{ steps.publish.outputs.revision }}
+      promoted: ${{ steps.publish.outputs.promoted }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: ${{ needs.arm64-fixture.outputs.approvals != '' && needs.arm64-fixture.outputs.approvals != '{}' }}
+      - name: Publish the verified catalog
+        id: publish
+        env:
+          MATCH_APPROVALS: ${{ needs.arm64-fixture.outputs.approvals }}
+        shell: bash
+        run: |
+          tip=$(git ls-remote origin refs/heads/main)
+          if [[ "${tip%%$'\t'*}" != "$GITHUB_SHA" ]]; then
+            echo 'Main advanced. Its next run will reconcile the pending matches.'
+            exit 0
+          fi
+          if [[ -n "$MATCH_APPROVALS" && "$MATCH_APPROVALS" != '{}' ]]; then
+            python3 -m tools.automatic_matches apply
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- function_catalog.json
+            git commit -m 'Record owner-approved function matches' -- function_catalog.json
+            if ! git push origin HEAD:refs/heads/main; then
+              tip=$(git ls-remote origin refs/heads/main)
+              if [[ "${tip%%$'\t'*}" == "$GITHUB_SHA" ]]; then
+                exit 1
+              fi
+              echo 'Main advanced during publication. Its next run will reconcile the pending matches.'
+              exit 0
+            fi
+            echo 'promoted=true' >> "$GITHUB_OUTPUT"
+          fi
+          revision=$(git rev-parse HEAD)
+          printf 'revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
 
   dashboard-build:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: arm64-fixture
+    if: needs.publish-catalog.outputs.revision != ''
+    needs: publish-catalog
     runs-on: ubuntu-24.04
     outputs:
       artifact: ${{ steps.artifact-name.outputs.value }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.publish-catalog.outputs.revision }}
           persist-credentials: false
       - run: python3 project.py dashboard
       - id: artifact-name
@@ -85,19 +146,20 @@ jobs:
           artifact_name: ${{ needs.dashboard-build.outputs.artifact }}
 
   discord:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.test_discord)
-    needs: arm64-fixture
+    if: needs.publish-catalog.outputs.revision != '' && (github.event_name == 'push' || inputs.test_discord || needs.publish-catalog.outputs.promoted == 'true')
+    needs: publish-catalog
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.publish-catalog.outputs.revision }}
           fetch-depth: 0
           persist-credentials: false
       - name: Announce new matches
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || needs.publish-catalog.outputs.promoted == 'true'
         env:
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
+          BEFORE: ${{ github.event.before || github.sha }}
+          AFTER: ${{ needs.publish-catalog.outputs.revision }}
           DISCORD_MATCH_WEBHOOK: ${{ secrets.DISCORD_MATCH_WEBHOOK }}
         run: python3 -m tools.notify_matches
       - name: Send a test message

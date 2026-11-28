@@ -36,7 +36,7 @@ The [historical reference](HISTORICAL_REFERENCE.md) reproduces a four-byte upstr
 2. Give your agent the ID, `AGENTS.md` and the fixture's `TASK.md`. Work on a separate branch or fork.
 3. Put the solution in the fixture's `candidate.cpp`. From the repo root run `python -m tools.verify_fixture --function HCR2-NNN` with your ID, then run `python project.py check`.
 4. Open a PR titled `[HCR2-NNN] Match <symbol>` with the `match.json` path, the exact command and its `MATCH` line. That line includes the stable ID, ELF symbol and section, byte count, and code SHA-256. CI repeats the byte check with the pinned compiler.
-5. The repository owner reviews the results and records each accepted match. That separate step updates the verified pool and the dashboard.
+5. The repository owner reviews and merges the PR. GitHub Actions rechecks the exact match on `main`, records it, and updates the verified pool and dashboard.
 
 The workflow follows the shared queues and independently checked progress of [Fallout 3 Decomp](https://f3decomp.com/how) and [Fallout: New Vegas Decomp](https://fnvdecomp.com/how). The dashboard counts verified research tasks. An exact artifact match is recorded as test evidence, and the dashboard makes no claim about percentage of the game reconstructed.
 
