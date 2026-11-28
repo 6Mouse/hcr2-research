@@ -30,7 +30,7 @@ git push origin main
 
 The command recompiles the checked-in candidate and records the date and evidence after an exact match. It writes the local catalog only. Add `--ndk <directory>` if needed. GitHub Actions rebuilds the fixtures before publishing the updated progress. Contributor PRs that edit the progress catalog fail the submission check.
 
-The dashboard calculates `matched_functions / total_functions` and `matched_bytes / total_bytes` separately. It displays decimal MB (1 MB = 1,000,000 bytes) and exact byte counts. Scope is original ARM64 fixtures. The shipped game's progress remains unmeasured.
+The dashboard calculates `matched_functions / total_functions` and `matched_bytes / total_bytes` separately for the test fixtures. It displays decimal MB (1 MB = 1,000,000 bytes) and exact byte counts. The shipped libraries have a separate [metadata inventory](release_inventory.json) derived from the pinned archive. The shipped game's progress remains unmeasured.
 
 ## Enable Discord updates
 

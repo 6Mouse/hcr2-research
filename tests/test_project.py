@@ -6,9 +6,27 @@ import unittest
 from zipfile import ZipFile
 
 from project import BLOCK, compare, verify_release
+from tools.release_inventory import elf_metadata
 
 
 class VerificationTests(unittest.TestCase):
+    def test_elf_inventory_separates_symbols_and_unwind_entries(self):
+        metadata = elf_metadata('''
+  [ 2] .text PROGBITS 0000000000000180 000180 000020 00 AX 0 0 4
+  LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x000200 0x000200 R E 0x4000
+  LOAD 0x000200 0x0000000000004200 0x0000000000004200 0x000080 0x000100 RW 0x4000
+Symbol table '.dynsym' contains 3 entries:
+     0: 0000000000000000 0 NOTYPE LOCAL DEFAULT UND
+     1: 0000000000000000 0 FUNC GLOBAL DEFAULT UND free
+     2: 0000000000000180 32 FUNC GLOBAL DEFAULT 2 fixture_function
+    fde_count: 5
+    Build ID: 1234
+''')
+        self.assertEqual(metadata, dict(executable_load_file_bytes=512, text_section_present=True,
+                                        defined_dynamic_function_symbols=1,
+                                        eh_frame_index_entries=5, gnu_build_id='1234'))
+        self.assertIsNone(elf_metadata('')['defined_dynamic_function_symbols'])
+
     def test_comparer_finds_first_difference_and_trailing_bytes(self):
         with TemporaryDirectory() as root:
             left = Path(root) / 'reference'

@@ -2,7 +2,7 @@
 
 Community work queue for offline observations and verification tools. The first milestone is an independently verified Android ARM64 1.76.1 reference. Build checks can compare contributor-owned artifacts byte for byte. The stock APK stays local to each contributor.
 
-[Live progress dashboard](https://6mouse.github.io/hcr2-research/) · [Browse functions](https://6mouse.github.io/hcr2-research/#function-catalog) · [Shared toolchain](TOOLCHAIN.md) · [Contributor and Discord setup](LAUNCH.md)
+[Live progress dashboard](https://6mouse.github.io/hcr2-research/) · [Shipped library inventory](release_inventory.json) · [Shared toolchain](TOOLCHAIN.md) · [Contributor and Discord setup](LAUNCH.md)
 
 ## Start here
 
@@ -18,11 +18,19 @@ Use `--exact-archive` before starting a task that depends on the game baseline. 
 python project.py verify-release --exact-archive 'C:\path\to\downloaded.apks'
 ```
 
+The [shipped library inventory](release_inventory.json) covers every native library entry across the archive's ARM64, ARMv7 and x86-64 splits. It records APK entry paths, SHA-256 hashes, exact file sizes, file-backed executable segment sizes, and the ELF symbol and unwind counts the pinned `llvm-readelf` can read. A JSON `null` means a value was unavailable or unmeasured. Unwind index entries can cover partial functions or other code ranges, and executable segments can also contain non-code bytes. The complete shipped function count and total function bytes are therefore unmeasured.
+
+Regenerate the inventory from the local archive after installing the [pinned NDK](TOOLCHAIN.md). The command verifies the archive and reads the packaged ELF headers, symbols and unwind metadata without launching the game.
+
+```powershell
+python -m tools.release_inventory 'C:\path\to\downloaded.apks' --output release_inventory.json
+```
+
 For artifact comparisons, run `python project.py compare <reference> <candidate>`. It exits 1 on a byte difference and reports both SHA-256 values, file sizes and the first differing byte offset. Save the output, toolchain version and compiler flags as evidence.
 
 ## Contribute with an agent
 
-1. Choose any open function in the [catalog](function_catalog.json). You can start immediately, even if someone else is working on the same function. For other research, choose an open ID in `tasks.json` and use the research claim form.
+1. Choose any open test fixture in the [fixture catalog](function_catalog.json). You can start immediately, even if someone else is working on the same function. For other research, choose an open ID in `tasks.json` and use the research claim form.
 2. Give your agent the ID, `AGENTS.md` and the fixture's `TASK.md`. Work on a separate branch or fork.
 3. Put the solution in the fixture's `candidate.cpp`. From the repo root run `python -m tools.verify_fixture --function HCR2-NNN` with your ID, then run `python project.py check`.
 4. Open a PR titled `[HCR2-NNN] Match <symbol>` with the `match.json` path, the exact command and its `MATCH` line. That line includes the stable ID, ELF symbol and section, byte count, and code SHA-256. CI repeats the byte check with the pinned compiler.

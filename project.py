@@ -16,6 +16,7 @@ from progress import CATALOG, read_catalog, totals
 
 ROOT = Path(__file__).resolve().parent
 BLOCK = 1024 * 1024
+INVENTORY = 'release_inventory.json'
 
 
 def digest(stream):
@@ -118,14 +119,20 @@ def dashboard(baseline):
         page = page.replace('%%' + key + '%%', value)
     output = ROOT / 'dist' / 'index.html'
     output.parent.mkdir(exist_ok=True)
+    inventory = (ROOT / INVENTORY).read_bytes()
+    packaged = json.loads(inventory)
+    if (packaged['version'], packaged['archive_sha256']) != (baseline['version'], baseline['archive_sha256']):
+        raise ValueError('Native library inventory does not match baseline.json')
+    (output.parent / INVENTORY).write_bytes(inventory)
     catalog = read_catalog((ROOT / CATALOG).read_text(encoding='utf-8'), ROOT)
     metrics = totals(catalog)
     (output.parent / 'progress.json').write_text(json.dumps({
-        'scope': 'original-arm64-fixtures', 'game_progress': None,
+        'scope': 'original-arm64-fixtures', 'game_progress': None, 'release_inventory': INVENTORY,
         **metrics, 'functions': catalog,
     }, indent=2) + '\n', encoding='utf-8')
     page = page.replace('%%PROGRESS%%', render_progress(catalog, metrics))
     page = page.replace('%%FUNCTIONS%%', render_functions(catalog))
+    page = page.replace('%%RELEASE_LIBRARIES%%', render_release_libraries(baseline, packaged['libraries']))
     output.write_text(page, encoding='utf-8')
     print(output)
 
@@ -171,6 +178,21 @@ def render_functions(catalog):
                     f'<small>.text.{symbol}</small></td><td>{entry["bytes"]:,}</td><td>{status}</td>'
                     f'<td><a href="{source}/{fixture}/match.json">Reference</a> · {instructions}</td></tr>')
     return '\n'.join(rows) or '<tr><td colspan="5">No enrolled functions.</td></tr>'
+
+
+def render_release_libraries(baseline, libraries):
+    engine = next((lib for lib in libraries if lib['apk'] == baseline['arm64_entry']
+                   and lib['entry'] == baseline['engine_entry']), None)
+    if engine is None or engine['sha256'] != baseline['engine_sha256']:
+        raise ValueError('Native library inventory is missing the pinned ARM64 engine')
+    by_abi = Counter(lib['abi'] for lib in libraries)
+    distribution = ', '.join(f'{count} {escape(abi)}' for abi, count in sorted(by_abi.items()))
+    frame_entries = engine['eh_frame_index_entries']
+    frames = f'{frame_entries:,}' if frame_entries is not None else 'unavailable'
+    return (f'<p>{len(libraries):,} library entries across the packaged ABI splits ({distribution}). '
+            f'The ARM64 engine file is <strong>{engine["file_bytes"]:,} bytes</strong> and reports '
+            f'<strong>{frames}</strong> unwind index entries. '
+            'A complete game function count and code-byte total are unmeasured.</p>')
 
 
 def main():
