@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       test_discord:
@@ -21,7 +22,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 12
     outputs:
       artifact: ${{ steps.artifact.outputs.name }}
     steps:
@@ -33,9 +34,26 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python3 -m tools.check_core_submission "$BASE_SHA" "$GITHUB_SHA"
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 -m tools.check_core_submission "$BASE_SHA" "$GITHUB_SHA" --title="$PR_TITLE"
       - name: Validate the core report and build the dashboard
         run: python3 project.py check
+      - name: Check whether candidates are enrolled
+        id: matching
+        run: |
+          count=$(python3 -m tools.match_core candidate-count)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: Install pinned Android NDK
+        if: steps.matching.outputs.count != '0'
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --location --retry 3 --silent --show-error \
+            --output ndk.zip https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+          printf '%s  %s\n' 22105e410cf29afcf163760cc95522b9fb981121 ndk.zip | sha1sum --check
+          unzip -q ndk.zip
+      - name: Verify enrolled candidates
+        if: steps.matching.outputs.count != '0'
+        run: python3 -m tools.match_core check-all --ndk "$RUNNER_TEMP/android-ndk-r27d"
       - id: artifact
         if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: echo "name=github-pages-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
@@ -71,7 +89,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Announce newly verified core observations
+      - name: Announce verified core research and function matches
         if: github.event_name == 'push'
         env:
           BEFORE: ${{ github.event.before }}

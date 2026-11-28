@@ -12,6 +12,8 @@ from tempfile import SpooledTemporaryFile
 from urllib.parse import urlparse
 from zipfile import BadZipFile, ZipFile
 
+from core_matches import CATALOG, counts as match_counts, read_matches
+
 ROOT = Path(__file__).resolve().parent
 BLOCK = 1024 * 1024
 INVENTORY = 'release_inventory.json'
@@ -96,10 +98,12 @@ def read_tasks(data):
     return tasks
 
 
-def core_progress(baseline, tasks):
+def core_progress(baseline, tasks, matches=()):
+    counts = match_counts(matches)
     return dict(scope='hcr2-1.76.1-arm64-core', version=baseline['version'], abi=baseline['abi'],
                 library=baseline['engine_entry'], sha256=baseline['engine_sha256'],
-                verified_machine_code_bytes=0, verified_machine_code_mb=0.0,
+                **counts, verified_machine_code_mb=counts['verified_machine_code_bytes'] / 1_000_000,
+                enrolled_machine_code_mb=counts['enrolled_machine_code_bytes'] / 1_000_000,
                 total_machine_code_bytes=None, total_machine_code_mb=None,
                 verified_observations=sum(task['state'] == 'verified' for task in tasks),
                 observation_tasks=len(tasks), release_inventory=INVENTORY)
@@ -131,11 +135,22 @@ def dashboard(baseline):
         raise ValueError('Core library report does not match baseline.json')
     report = render_core_library(baseline, packaged['libraries'])
     (output.parent / INVENTORY).write_bytes(inventory)
-    metrics = core_progress(baseline, tasks)
+    catalog = read_matches((ROOT / CATALOG).read_bytes(), baseline, ROOT)
+    metrics = core_progress(baseline, tasks, catalog['functions'])
     (output.parent / 'progress.json').write_text(json.dumps(metrics, indent=2) + '\n', encoding='utf-8')
+    (output.parent / CATALOG).write_text(json.dumps(catalog, indent=2) + '\n', encoding='utf-8')
+    entries = []
+    for entry in catalog['functions']:
+        label = 'Open'
+        if entry.get('verified_on'):
+            label = f'<a href="{escape(entry["evidence"], quote=True)}">Verified · {entry["verified_on"]}</a>'
+        entries.append(f'<li><strong>{entry["id"]}</strong> · <code>{entry["symbol"]}</code> · '
+                       f'{entry["bytes"]:,} bytes · {label}</li>')
     for key, value in {'BASELINE': escape(f'{baseline["version"]} · {baseline["abi"]}'),
                        'HASH': escape(baseline['engine_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows),
-                       'CORE_LIBRARY': report, 'VERIFIED_MB': f'{metrics["verified_machine_code_mb"]:.6f}'}.items():
+                       'CORE_LIBRARY': report, 'VERIFIED_MB': f'{metrics["verified_machine_code_mb"]:.6f}',
+                       'ENROLLED_MB': f'{metrics["enrolled_machine_code_mb"]:.6f}',
+                       'MATCHES': ''.join(entries) or '<li>No 1.76.1 core functions enrolled yet.</li>'}.items():
         page = page.replace('%%' + key + '%%', value)
     output.write_text(page, encoding='utf-8')
     print(output)

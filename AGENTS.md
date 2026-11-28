@@ -1,6 +1,8 @@
 # Contributor agents
 
-Read [README.md](README.md) and [tasks.json](tasks.json). The research target is the pinned **1.76.1 arm64-v8a** core library `lib/arm64-v8a/libcocos2dcpp.so`. Keep work scoped to that exact target. Pick an open task without claiming it and place your note at `notes/<task-id>-<short-name>.md`. Keep your PR limited to the research notes.
+For matching, follow [MATCHING.md](MATCHING.md). Pick an open function in `core_matches.json`, run the pinned verifier, and submit only its candidate source. Byte equality and the evidence for inferred names are separate review items.
+
+For observational research, read [README.md](README.md) and [tasks.json](tasks.json). The target is the pinned **1.76.1 arm64-v8a** core library `lib/arm64-v8a/libcocos2dcpp.so`. Pick an open task without claiming it. Submit your note at `notes/<task-id>-<short-name>.md`.
 
 Verify your local archive with `python project.py verify-release --exact-archive <archive>`. For the core ELF report, use `python -m tools.release_inventory <archive> --output local-output/core.json`. Record the exact command, engine SHA-256, tool version, and result. Keep APKs, libraries, private inputs, and raw binary dumps local.
 

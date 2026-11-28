@@ -1,8 +1,8 @@
 # HCR2 1.76.1 ARM64 Core Research
 
-An unofficial project for reproducible offline mechanics tests and diagnostics for `lib/arm64-v8a/libcocos2dcpp.so` from Hill Climb Racing 2 **1.76.1**. Choose a task about this build and library. Use a local, unmodified copy of the game for experiments.
+An unofficial project for isolated function matching, reproducible offline mechanics tests, and diagnostics for `lib/arm64-v8a/libcocos2dcpp.so` from Hill Climb Racing 2 **1.76.1**. Choose a task about this build and library. Use a local, unmodified copy of the game for experiments.
 
-[Live dashboard](https://6mouse.github.io/hcr2-research/) · [Open tasks](tasks.json) · [Core ELF report](release_inventory.json) · [Maintainer guide](LAUNCH.md)
+[Live dashboard](https://6mouse.github.io/hcr2-research/) · [Function matching](MATCHING.md) · [Open research tasks](tasks.json) · [Core ELF report](release_inventory.json) · [Maintainer guide](LAUNCH.md)
 
 ## Start here
 
