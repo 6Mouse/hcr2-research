@@ -12,8 +12,6 @@ from tempfile import SpooledTemporaryFile
 from urllib.parse import urlparse
 from zipfile import BadZipFile, ZipFile
 
-from progress import CATALOG, read_catalog, totals
-
 ROOT = Path(__file__).resolve().parent
 BLOCK = 1024 * 1024
 INVENTORY = 'release_inventory.json'
@@ -71,8 +69,10 @@ def verify_release(path, baseline):
     return report
 
 
-def load_tasks():
-    tasks = json.loads((ROOT / 'tasks.json').read_text(encoding='utf-8'))
+def read_tasks(data):
+    tasks = json.loads(data)
+    if not isinstance(tasks, list):
+        raise ValueError('The task catalog must be an array.')
     seen = set()
     for task in tasks:
         identifier = task['id']
@@ -96,8 +96,17 @@ def load_tasks():
     return tasks
 
 
+def core_progress(baseline, tasks):
+    return dict(scope='hcr2-1.76.1-arm64-core', version=baseline['version'], abi=baseline['abi'],
+                library=baseline['engine_entry'], sha256=baseline['engine_sha256'],
+                verified_machine_code_bytes=0, verified_machine_code_mb=0.0,
+                total_machine_code_bytes=None, total_machine_code_mb=None,
+                verified_observations=sum(task['state'] == 'verified' for task in tasks),
+                observation_tasks=len(tasks), release_inventory=INVENTORY)
+
+
 def dashboard(baseline):
-    tasks = load_tasks()
+    tasks = read_tasks((ROOT / 'tasks.json').read_bytes())
     counts = Counter(task['state'] for task in tasks)
     cards = ''.join(f'<div><strong>{counts[state]}</strong><span>{state.title()}</span></div>'
                     for state in ('open', 'claimed', 'in review', 'verified'))
@@ -114,86 +123,37 @@ def dashboard(baseline):
                     f'<td><b>{escape(task["title"])}</b><small>{escape(task["acceptance"])}</small></td>'
                     f'<td>{escape(task["area"])}</td><td>{escape(task["state"].title())}</td><td>{evidence}</td></tr>')
     page = (ROOT / 'dashboard.html').read_text(encoding='utf-8')
-    for key, value in {'BASELINE': escape(f'{baseline["version"]} · {baseline["abi"]}'),
-                       'HASH': escape(baseline['archive_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows)}.items():
-        page = page.replace('%%' + key + '%%', value)
     output = ROOT / 'dist' / 'index.html'
     output.parent.mkdir(exist_ok=True)
     inventory = (ROOT / INVENTORY).read_bytes()
     packaged = json.loads(inventory)
     if (packaged['version'], packaged['archive_sha256']) != (baseline['version'], baseline['archive_sha256']):
-        raise ValueError('Native library inventory does not match baseline.json')
+        raise ValueError('Core library report does not match baseline.json')
+    report = render_core_library(baseline, packaged['libraries'])
     (output.parent / INVENTORY).write_bytes(inventory)
-    catalog = read_catalog((ROOT / CATALOG).read_text(encoding='utf-8'), ROOT)
-    metrics = totals(catalog)
-    (output.parent / 'progress.json').write_text(json.dumps({
-        'scope': 'original-arm64-fixtures', 'game_progress': None, 'release_inventory': INVENTORY,
-        **metrics, 'functions': catalog,
-    }, indent=2) + '\n', encoding='utf-8')
-    page = page.replace('%%PROGRESS%%', render_progress(catalog, metrics))
-    page = page.replace('%%FUNCTIONS%%', render_functions(catalog))
-    page = page.replace('%%RELEASE_LIBRARIES%%', render_release_libraries(baseline, packaged['libraries']))
+    metrics = core_progress(baseline, tasks)
+    (output.parent / 'progress.json').write_text(json.dumps(metrics, indent=2) + '\n', encoding='utf-8')
+    for key, value in {'BASELINE': escape(f'{baseline["version"]} · {baseline["abi"]}'),
+                       'HASH': escape(baseline['engine_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows),
+                       'CORE_LIBRARY': report, 'VERIFIED_MB': f'{metrics["verified_machine_code_mb"]:.6f}'}.items():
+        page = page.replace('%%' + key + '%%', value)
     output.write_text(page, encoding='utf-8')
     print(output)
 
 
-def render_progress(catalog, metrics):
-    def measure(label, done, total, display):
-        percent = f'{done / total:.1%}' if total else 'No target yet'
-        bar = (f'<progress aria-label="{label}" value="{done}" max="{total}"></progress>'
-               if total else '')
-        return (f'<article><div class="measure"><b>{label}</b><span>{percent}</span></div>'
-                f'<strong>{display}</strong>{bar}</article>')
-
-    done, total = metrics['matched_functions'], metrics['total_functions']
-    size, extent = metrics['matched_bytes'], metrics['total_bytes']
-    match_rows = []
-    for entry in sorted(catalog, key=lambda row: row.get('matched_on') or '', reverse=True):
-        if entry.get('matched_on'):
-            url = escape(entry['evidence'], quote=True)
-            match_rows.append(f'<li><code>{escape(entry["symbol"])}</code> '
-                              f'<span>{entry["bytes"]:,} bytes · {entry["matched_on"]} · '
-                              f'<a href="{url}">Evidence</a></span></li>')
-    return (measure('Functions matched', done, total, f'{done:,} / {total:,}') +
-            measure('Machine code matched', size, extent,
-                    f'{size / 1_000_000:,.6f} / {extent / 1_000_000:,.6f} MB '
-                    f'<small>{size:,} / {extent:,} bytes</small>') +
-            '<div class="matches"><h3>Recent exact matches</h3><ul>' +
-            (''.join(match_rows[:10]) or '<li>No verified matches yet.</li>') + '</ul></div>')
-
-
-def render_functions(catalog):
-    rows = []
-    source = 'https://github.com/6Mouse/hcr2-research/blob/main/fixtures'
-    for entry in catalog:
-        fixture = escape(entry['fixture'])
-        symbol = escape(entry['symbol'])
-        if entry.get('matched_on'):
-            status = f'<a href="{escape(entry["evidence"], quote=True)}">Verified</a> · {entry["matched_on"]}'
-            instructions = f'<a href="{source}/{fixture}/candidate.cpp">Accepted source</a>'
-        else:
-            status = 'Open'
-            instructions = f'<a href="{source}/{fixture}/TASK.md">Instructions</a>'
-        rows.append(f'<tr><td><code>{entry["id"]}</code></td><td><code>{symbol}</code>'
-                    f'<small>.text.{symbol}</small></td><td>{entry["bytes"]:,}</td><td>{status}</td>'
-                    f'<td><a href="{source}/{fixture}/match.json">Reference</a> · {instructions}</td></tr>')
-    return '\n'.join(rows) or '<tr><td colspan="5">No enrolled functions.</td></tr>'
-
-
-def render_release_libraries(baseline, libraries):
-    engine = next((lib for lib in libraries if lib['apk'] == baseline['arm64_entry']
-                   and lib['entry'] == baseline['engine_entry']), None)
-    if engine is None or engine['sha256'] != baseline['engine_sha256']:
-        raise ValueError('Native library inventory is missing the pinned ARM64 engine')
-    by_abi = Counter(lib['abi'] for lib in libraries)
-    distribution = ', '.join(f'{count} {escape(abi)}' for abi, count in sorted(by_abi.items()))
+def render_core_library(baseline, libraries):
+    if len(libraries) != 1:
+        raise ValueError('The report must contain exactly the pinned core library.')
+    engine, = libraries
+    if (engine['abi'], engine['apk'], engine['entry'], engine['sha256']) != (
+            baseline['abi'], baseline['arm64_entry'], baseline['engine_entry'], baseline['engine_sha256']):
+        raise ValueError('The core library report does not match the pinned reference.')
     frame_entries = engine['eh_frame_index_entries']
     frames = f'{frame_entries:,}' if frame_entries is not None else 'unavailable'
-    return (f'<p>{len(libraries):,} library entries across the packaged ABI splits ({distribution}). '
-            f'The ARM64 engine file is <strong>{engine["file_bytes"]:,} bytes</strong> and reports '
+    size = engine['executable_load_file_bytes']
+    return (f'<p>The core library file is <strong>{engine["file_bytes"]:,} bytes</strong> and reports '
             f'<strong>{frames}</strong> unwind index entries. Its file-backed executable segments total '
-            f'<strong>{engine["executable_load_file_bytes"]:,} bytes</strong>. '
-            'A complete game function count and code-byte total are unmeasured.</p>')
+            f'<strong>{size / 1_000_000:.6f} MB</strong> ({size:,} bytes).</p>')
 
 
 def main():
@@ -214,8 +174,6 @@ def main():
         if args.command == 'check':
             subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests'],
                            cwd=ROOT, check=True, timeout=30)
-            subprocess.run([sys.executable, 'replay_drift_fixture.py'], cwd=ROOT,
-                           check=True, timeout=30)
             dashboard(baseline)
             return 0
         if args.command == 'dashboard':

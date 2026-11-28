@@ -1,12 +1,12 @@
-Function submissions use `[HCR2-NNN] Match <symbol>` as the PR title.
+Task ID and note path
 
-Function ID and path to `match.json` or research task ID and claim issue:
+Target library and SHA-256
 
-Reproduction command and results (paste the `MATCH` line for a function):
+Command, setup, and measurements
 
-- [ ] Changes are limited to one enrolled `candidate.cpp` or one research task.
-- [ ] Provisional names and interpretations are labeled where they appear.
-- [ ] Inputs are synthetic, redistributable, or kept local.
-- [ ] A reviewer can reproduce the result without account data or a private endpoint.
+Uncertainty or untested cases
 
-Maintainer review evidence (owner fills this in for research tasks):
+- [ ] This report covers HCR2 1.76.1 arm64-v8a core behavior or metadata.
+- [ ] Reproduction steps and units are recorded.
+- [ ] The changed files are Markdown notes under notes/.
+- [ ] Game binaries and account data stayed local.

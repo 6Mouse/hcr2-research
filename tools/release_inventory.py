@@ -1,10 +1,10 @@
-"""Record metadata from a verified local 1.76.1 archive."""
+"""Report metadata for the core ARM64 library in a verified local 1.76.1 archive."""
 import argparse
 from contextlib import redirect_stdout
 from hashlib import sha256
 from io import BytesIO
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -48,28 +48,20 @@ def inventory(path, baseline, readelf):
     verified = verify_release(path, baseline)
     if not (verified['match'] and verified['archive_match']):
         raise ValueError('The original archive fingerprint does not match baseline.json.')
-    libraries = []
-    with TemporaryDirectory(prefix='hcr2-elf-headers-') as temp, ZipFile(path) as outer:
-        local_library = Path(temp) / 'library.so'
-        for entry in sorted(outer.namelist()):
-            if not entry.endswith('.apk'):
-                continue
-            with ZipFile(BytesIO(outer.read(entry))) as split:
-                for member in sorted(split.namelist()):
-                    parts = PurePosixPath(member).parts
-                    if len(parts) != 3 or parts[0] != 'lib' or not member.endswith('.so'):
-                        continue
-                    data = split.read(member)
-                    local_library.write_bytes(data)
-                    report = subprocess.check_output([
-                        readelf, '--program-headers', '--sections', '--dyn-syms', '--notes',
-                        '--unwind', '--wide', local_library,
-                    ], text=True, encoding='utf-8', errors='replace', timeout=40)
-                    libraries.append(dict(abi=parts[1], apk=entry, entry=member,
-                                          sha256=sha256(data).hexdigest(), file_bytes=len(data),
-                                          **elf_metadata(report)))
+    entry, member = baseline['arm64_entry'], baseline['engine_entry']
+    with (ZipFile(path) as outer, ZipFile(BytesIO(outer.read(entry))) as split,
+          TemporaryDirectory(prefix='hcr2-elf-headers-') as temp):
+        data = split.read(member)
+        local_library = Path(temp) / 'libcocos2dcpp.so'
+        local_library.write_bytes(data)
+        report = subprocess.check_output([
+            readelf, '--program-headers', '--sections', '--dyn-syms', '--notes',
+            '--unwind', '--wide', local_library,
+        ], text=True, encoding='utf-8', errors='replace', timeout=40)
+    library = dict(abi=baseline['abi'], apk=entry, entry=member,
+                   sha256=sha256(data).hexdigest(), file_bytes=len(data), **elf_metadata(report))
     return dict(version=baseline['version'], archive_sha256=baseline['archive_sha256'],
-                complete_function_count=None, complete_function_bytes=None, libraries=libraries)
+                complete_function_count=None, complete_function_bytes=None, libraries=[library])
 
 
 def main():
@@ -85,6 +77,7 @@ def main():
             _, _, readelf = tools(args.ndk or default_ndk(spec['ndk_package']), spec)
         report = json.dumps(inventory(args.archive, baseline, readelf), indent=2) + '\n'
         if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_bytes(report.encode('utf-8'))
         else:
             sys.stdout.write(report)

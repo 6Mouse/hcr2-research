@@ -1,47 +1,17 @@
-# Launch checklist
+# Share and review
 
-The starter can be prepared by one maintainer. It includes the source, the validation commands, the work queue, and both tested pilots. The first outside contribution can wait until after launch.
+Share the [public repo](https://github.com/6Mouse/hcr2-research) and the [dashboard](https://6mouse.github.io/hcr2-research/). Give contributors this prompt.
 
-## Share the project
+> Read README.md and AGENTS.md. Pick any open task about the pinned HCR2 1.76.1 ARM64 core library. Verify your local copy first, then submit the command, engine fingerprint, measurements, and any uncertainties as a GitHub issue or a short Markdown note. Start with HCR2-001 if you're new.
 
-Share the [public repository](https://github.com/6Mouse/hcr2-research) and [live progress dashboard](https://6mouse.github.io/hcr2-research/). GitHub Actions checks the starter and builds the dashboard on `main`. `python project.py check` also runs locally without game files or an NDK. The repository does not include a project license.
+## Accept a report
 
-## Invite the first contributor
+1. Review the report and reproduce the observation separately. For PRs, review the changed files before approving first-time CI runs if GitHub asks.
+2. Merge the note if it was submitted as a PR. When the result is verified, add the contributor login, independent reviewer login, and evidence URL to its entry in `tasks.json`, then set the state to `verified`.
+3. Commit the task change to `main`. GitHub Actions validates it and publishes the dashboard. After deployment, the webhook announces newly verified observations.
 
-Send the repo link with this brief:
+Machine-code megabytes on the dashboard refer to verified core function bytes. The core ELF's executable segment size is recorded separately as a reference measurement.
 
-> Clone the repo and read `AGENTS.md` and `TOOLCHAIN.md`. Pick any open function in `function_catalog.json` and read its fixture's `TASK.md`. Write `candidate.cpp`, verify it with `python -m tools.verify_fixture --function HCR2-NNN`, and open a PR titled `[HCR2-NNN] Match <symbol>`. Include the path to `match.json`, your command and the `MATCH` line. Use only enrolled original or authorized references. Keep game binaries, assets and private inputs out of the PR.
+## Discord
 
-Agents can work on the same function in parallel. Submit one function per PR so its evidence and review are easy to find. The catalog and fixture manifests give everyone the same identifiers and reference fingerprints.
-
-### Review and merge a match
-
-Review the tagged PR as the repository owner and squash merge it after the ARM64 check passes. If GitHub asks for approval to run a first-time contributor's checks, review the changed files before approving that run. Merging is the approval that counts toward progress.
-
-GitHub Actions rebuilds `main` with the pinned NDK, checks that GitHub recorded the owner as the merger, and checks that the reviewed PR changed only the tagged `candidate.cpp`. A verified candidate becomes a catalog entry with the PR as evidence. The same run publishes the dashboard and sends a Discord notice if configured. One run can reconcile several pending owner merges. Each function counts once.
-
-An ordinary push records matches when their PR evidence is available. To retry discovery, run **ARM64 matching pilot** on `main` with **test_discord** off. For a verified merge that the workflow cannot link to its PR, authenticate GitHub CLI as the owner and use the recovery command below from a clean checkout on `main`. Replace `123` with the merged PR number.
-
-```powershell
-python -m tools.accept_match 123
-```
-
-The recovery command also verifies the exact bytes before publishing. Add `--ndk <directory>` if needed. Contributor PRs that edit the progress catalog fail the submission check.
-
-For local-only recording, run `python -m tools.record_match HCR2-006 --evidence 'https://github.com/6Mouse/hcr2-research/pull/123'` with the reviewed function ID and evidence URL.
-
-The dashboard calculates `matched_functions / total_functions` and `matched_bytes / total_bytes` separately for the test fixtures. It displays decimal MB (1 MB = 1,000,000 bytes) and exact byte counts. The shipped libraries have a separate [metadata inventory](release_inventory.json) derived from the pinned archive. The shipped game's progress remains unmeasured.
-
-## Enable Discord updates
-
-1. In Discord, open the destination channel's settings, then **Integrations → Webhooks → New Webhook**. Copy its URL.
-2. Open [GitHub Actions secrets](https://github.com/6Mouse/hcr2-research/settings/secrets/actions). Add a repository secret called `DISCORD_MATCH_WEBHOOK` and paste the URL there.
-3. In [Actions → ARM64 matching pilot](https://github.com/6Mouse/hcr2-research/actions/workflows/arm64-fixture.yml), choose **Run workflow** on `main` and enable **test_discord**. Confirm the labeled test appears in Discord.
-
-After a successful push to `main`, the workflow announces newly matched IDs with the symbol, exact byte count, match date, and both cumulative progress totals. Existing matches are not sent when you add the secret. Re-running a successful notification job for the same push may send those messages again.
-
-## What the results cover
-
-- HCR2-003 passed independent reproduction on synthetic coordinates, including the one injected jump at 16 km. It does not test real game replays.
-- HCR2-005 built identical reference objects on Windows and a separate Linux runner. The function bytes matched and a changed candidate failed. The task remains in review, with the CI run linked as evidence.
-- The original 1.76.1 split archive has pinned hashes in `baseline.json`. The matching compiler and flags apply to the original pilot fixture. The project has not established the shipped game's compiler settings, an exact match to a shipped function, or a game rebuild pipeline.
+The workflow uses the `DISCORD_MATCH_WEBHOOK` repository secret. The configured channel receives updates when a core observation is newly marked verified. A labeled delivery test can be sent from **Actions → ARM64 core research → Run workflow** on `main` with **test_discord** enabled. Rerunning a previously successful notification job may repeat its message.

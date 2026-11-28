@@ -5,11 +5,39 @@ from tempfile import TemporaryDirectory
 import unittest
 from zipfile import ZipFile
 
-from project import BLOCK, compare, verify_release
+from project import BLOCK, compare, core_progress, render_core_library, verify_release
+from tools.check_core_submission import check_paths
+from tools.notify_core import update_message
 from tools.release_inventory import elf_metadata
 
 
 class VerificationTests(unittest.TestCase):
+    def test_core_progress_counts_evidence_separately_from_machine_code(self):
+        target = dict(version='1.76.1', abi='arm64-v8a', arm64_entry='config.arm64_v8a.apk',
+                      engine_entry='lib/arm64-v8a/libcocos2dcpp.so', engine_sha256='hash')
+        library = dict(abi=target['abi'], apk=target['arm64_entry'], entry=target['engine_entry'],
+                       sha256=target['engine_sha256'], executable_load_file_bytes=36_384_356,
+                       file_bytes=38_864_464, eh_frame_index_entries=105_543)
+        self.assertIn('36.384356 MB', render_core_library(target, [library]))
+        with self.assertRaises(ValueError):
+            render_core_library(target, [library, {**library, 'entry': 'lib/arm64-v8a/libother.so'}])
+        open_task = {'id': 'HCR2-001', 'state': 'open'}
+        verified = {**open_task, 'state': 'verified'}
+        progress = core_progress(target, [verified])
+        self.assertEqual(progress['verified_observations'], 1)
+        self.assertEqual(progress['verified_machine_code_bytes'], 0)
+        self.assertIsNone(progress['total_machine_code_mb'])
+        self.assertIn('Observations verified: 1/1', update_message([open_task], [verified]))
+        self.assertIn('0.000000 MB', update_message([open_task], [verified]))
+        self.assertEqual(update_message([verified], [verified]), '')
+
+    def test_public_contributions_use_core_notes(self):
+        check_paths(['notes/HCR2-001-fingerprint.md'], {'HCR2-001'})
+        for path in ('tasks.json', 'fixtures/sample/candidate.cpp', 'notes/HCR2-003-old.md',
+                     'notes/HCR2-001.so'):
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                check_paths([path], {'HCR2-001'})
+
     def test_elf_inventory_separates_symbols_and_unwind_entries(self):
         metadata = elf_metadata('''
   [ 2] .text PROGBITS 0000000000000180 000180 000020 00 AX 0 0 4

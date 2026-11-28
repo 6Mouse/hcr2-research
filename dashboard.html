@@ -2,25 +2,22 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HCR2 Research · Work queue</title>
+<title>HCR2 1.76.1 · ARM64 core research</title>
 <style>
 :root{color-scheme:dark;--paper:#121a1c;--ink:#f2f5ee;--muted:#b3c0bb;--line:#354444;--accent:#c8ec7e}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:1rem/1.55 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:3rem 1.25rem}header{border-top:4px solid var(--accent);padding-top:1rem}.eyebrow,code{font:0.85rem ui-monospace,monospace;color:var(--accent)}h1{font-size:clamp(2.75rem,8vw,5.5rem);letter-spacing:-.075em;line-height:1;margin:.5rem 0 1rem}h2{margin:0}p,small{color:var(--muted)}code{overflow-wrap:anywhere}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.75rem;margin:2rem 0}.cards div{padding:.85rem 1rem;border:1px solid var(--line);background:#1a2627}.cards strong{display:block;font-size:1.9rem}.cards span{color:var(--muted)}.toolbar{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:space-between;align-items:center;margin-bottom:.75rem}select{font:inherit;padding:.35rem;border:1px solid var(--line);background:#1a2627;color:inherit}.table{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:630px;text-align:left}td,th{padding:.75rem .6rem;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}small{display:block;margin-top:.2rem}a{color:var(--accent)}footer{margin-top:2rem;color:var(--muted)}
 </style>
 <style>
-.scope{margin:2.5rem 0}.scope p{margin:.3rem 0 1rem}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:.8rem}.metrics article{border:1px solid var(--line);background:#1a2627;padding:1rem}.measure,.matches li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.25rem 1rem}.measure span{color:var(--accent);font-variant-numeric:tabular-nums}.metrics strong{font-size:clamp(1.15rem,3vw,1.65rem);display:block;margin:.4rem 0 .6rem}.metrics small{font-weight:400}.metrics progress{width:100%;accent-color:var(--accent)}.matches{grid-column:1/-1}.matches h3{margin:.5rem 0}.matches ul{list-style:none;padding:0;margin:0}.matches li{border-bottom:1px solid var(--line);padding:.6rem 0}.matches span{color:var(--muted)}
+.scope{margin:2.5rem 0}.scope p{max-width:70ch;margin:.3rem 0 1rem}.metric{border:1px solid var(--line);background:#1a2627;padding:1rem}.metric strong{font-size:clamp(1.15rem,3vw,1.65rem);display:block;margin:.4rem 0 .6rem}
 </style>
 <main>
-<header><div class="eyebrow">ANDROID REFERENCE · %%BASELINE%%</div><h1>HCR2 Research</h1><p>A shared queue for reproducible offline research and artifact checks.</p><details><summary>Reference split archive fingerprint</summary><code>%%HASH%%</code></details></header>
-<section class="scope" id="shipped-libraries"><h2>Shipped 1.76.1 libraries</h2>%%RELEASE_LIBRARIES%%<p><a href="release_inventory.json">Library paths, hashes and ELF measurements</a></p></section>
-<section class="scope" id="historical-reference"><h2>Historical 1.7.0 ARMv7 example</h2><p>Verified 1 of 1 functions and 4 of 4 code bytes for the Cocos2d-x rectangle accessor. <a href="https://github.com/6Mouse/hcr2-research/blob/main/HISTORICAL_REFERENCE.md">Evidence and local verification command</a></p></section>
-<section class="scope"><h2>ARM64 test fixture progress</h2><p>These totals cover the small C++ exercises used to test the matching workflow. <a href="#function-catalog">Browse fixtures</a> · <a href="progress.json">Progress data</a> · <a href="https://github.com/6Mouse/hcr2-research">Repository</a></p><div class="metrics">%%PROGRESS%%</div></section>
-<section class="scope" id="function-catalog"><h2>Test fixture catalog</h2><p>Choose any open fixture. Run the byte checker and submit your candidate in a pull request. The repository owner records verified matches.</p>
-<div class="table"><table><thead><tr><th scope="col">ID</th><th scope="col">ELF symbol and section</th><th scope="col">Bytes</th><th scope="col">Status</th><th scope="col">Files</th></tr></thead><tbody>%%FUNCTIONS%%</tbody></table></div></section>
+<header><div class="eyebrow">ANDROID · %%BASELINE%%</div><h1>HCR2 Core Research</h1><p>Reproducible offline mechanics tests and diagnostics for <code>libcocos2dcpp.so</code>.</p><p><a href="https://github.com/6Mouse/hcr2-research#start-here">Start here</a> · <a href="#tasks">Research tasks</a></p><details><summary>Core library SHA-256</summary><code>%%HASH%%</code></details></header>
+<section class="scope" id="shipped-libraries"><h2>ARM64 core reference</h2>%%CORE_LIBRARY%%<p><a href="release_inventory.json">Download the core ELF report</a></p></section>
+<section class="scope"><h2>Machine code verification</h2><div class="metric"><strong>%%VERIFIED_MB%% MB verified</strong><p>The total amount of function machine code is unmeasured. Executable segments can include data and padding, so their size does not establish a progress percentage.</p><a href="progress.json">Progress data</a></div></section>
 <section class="cards" aria-label="Task totals">%%CARDS%%</section>
-<section><div class="toolbar"><h2>Work queue</h2><label>Status <select id="status"><option value="">All tasks</option><option>open</option><option>claimed</option><option>in review</option><option>verified</option></select></label></div>
+<section id="tasks"><div class="toolbar"><h2>Research tasks</h2><label>Status <select id="status"><option value="">All tasks</option><option>open</option><option>claimed</option><option>in review</option><option>verified</option></select></label></div>
 <div class="table"><table><thead><tr><th scope="col">ID</th><th scope="col">Task and acceptance criteria</th><th scope="col">Area</th><th scope="col">Status</th><th scope="col">Evidence</th></tr></thead><tbody>%%ROWS%%<tr id="empty" hidden><td colspan="5">No tasks in this status.</td></tr></tbody></table></div></section>
-<footer>Use the issue tracker to claim a research task. Function matching is open to everyone.</footer>
+<footer>Choose any task and submit a reproducible observation. The owner records reviewed evidence.</footer>
 </main>
 <script>
 const status = document.querySelector('#status');

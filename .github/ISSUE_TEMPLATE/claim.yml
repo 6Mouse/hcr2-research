@@ -1,6 +1,6 @@
-name: Claim a research task
-description: Coordinate one task with other contributors
-title: "[Claim] HCR2-"
+name: Core observation
+description: Report a reproducible result for the HCR2 1.76.1 ARM64 core.
+title: "[HCR2-NNN] "
 body:
   - type: input
     id: task
@@ -10,8 +10,9 @@ body:
     validations:
       required: true
   - type: textarea
-    id: approach
+    id: evidence
     attributes:
-      label: Approach and expected evidence
+      label: Setup and observed result
+      description: Include the core SHA-256, exact command or test steps, measurements with units, and uncertainties. Keep game binaries and account data local.
     validations:
       required: true

@@ -1,10 +1,9 @@
-name: ARM64 matching pilot
+name: ARM64 core research
 
 on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       test_discord:
@@ -14,125 +13,42 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
-  group: arm64-matching-${{ github.ref }}
+  group: arm64-core-${{ github.ref }}
   queue: max
 
 jobs:
-  arm64-fixture:
+  verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 5
     outputs:
-      approvals: ${{ steps.find-matches.outputs.approvals }}
+      artifact: ${{ steps.artifact.outputs.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Check contributor submission scope
+      - name: Check public contribution scope
         if: github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: python3 -m tools.check_submission "$BASE_SHA" "$GITHUB_SHA" --title="$PR_TITLE"
-      - name: Install pinned Android NDK
-        working-directory: ${{ runner.temp }}
-        run: |
-          curl --fail --location --retry 3 --silent --show-error \
-            --output ndk.zip https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
-          printf '%s  %s\n' 22105e410cf29afcf163760cc95522b9fb981121 ndk.zip | sha1sum --check
-          unzip -q ndk.zip
-      - name: Check the reproducible build and exact function match
-        run: |
-          for manifest in fixtures/*/match.json; do
-            fixture="${manifest%/match.json}"
-            args=()
-            if [[ ! -f "$fixture/candidate.cpp" ]]; then args+=(--reference-only); fi
-            python3 tools/verify_fixture.py --fixture "$fixture" \
-              --ndk "$RUNNER_TEMP/android-ndk-r27d" "${args[@]}"
-          done
-      - name: Run the starter checks
+        run: python3 -m tools.check_core_submission "$BASE_SHA" "$GITHUB_SHA"
+      - name: Validate the core report and build the dashboard
         run: python3 project.py check
-      - name: Find owner-approved matches
-        id: find-matches
-        if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.test_discord
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          approvals=$(python3 -m tools.automatic_matches discover)
-          printf 'approvals=%s\n' "$approvals" >> "$GITHUB_OUTPUT"
-
-  publish-catalog:
-    if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: arm64-fixture
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    outputs:
-      revision: ${{ steps.publish.outputs.revision }}
-      promoted: ${{ steps.publish.outputs.promoted }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: ${{ needs.arm64-fixture.outputs.approvals != '' && needs.arm64-fixture.outputs.approvals != '{}' }}
-      - name: Publish the verified catalog
-        id: publish
-        env:
-          MATCH_APPROVALS: ${{ needs.arm64-fixture.outputs.approvals }}
-        shell: bash
-        run: |
-          tip=$(git ls-remote origin refs/heads/main)
-          if [[ "${tip%%$'\t'*}" != "$GITHUB_SHA" ]]; then
-            echo 'Main advanced. Its next run will reconcile the pending matches.'
-            exit 0
-          fi
-          if [[ -n "$MATCH_APPROVALS" && "$MATCH_APPROVALS" != '{}' ]]; then
-            python3 -m tools.automatic_matches apply
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add -- function_catalog.json
-            git commit -m 'Record owner-approved function matches' -- function_catalog.json
-            if ! git push origin HEAD:refs/heads/main; then
-              tip=$(git ls-remote origin refs/heads/main)
-              if [[ "${tip%%$'\t'*}" == "$GITHUB_SHA" ]]; then
-                exit 1
-              fi
-              echo 'Main advanced during publication. Its next run will reconcile the pending matches.'
-              exit 0
-            fi
-            echo 'promoted=true' >> "$GITHUB_OUTPUT"
-          fi
-          revision=$(git rev-parse HEAD)
-          printf 'revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
-
-  dashboard-build:
-    if: needs.publish-catalog.outputs.revision != ''
-    needs: publish-catalog
-    runs-on: ubuntu-24.04
-    outputs:
-      artifact: ${{ steps.artifact-name.outputs.value }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.publish-catalog.outputs.revision }}
-          persist-credentials: false
-      - run: python3 project.py dashboard
-      - id: artifact-name
-        run: echo "value=github-pages-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - id: artifact
+        if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: echo "name=github-pages-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.artifact.outputs.name != ''
         with:
-          name: ${{ steps.artifact-name.outputs.value }}
+          name: ${{ steps.artifact.outputs.name }}
           path: dist
 
   dashboard:
-    needs: dashboard-build
+    if: needs.verify.outputs.artifact != ''
+    needs: verify
     runs-on: ubuntu-24.04
-    concurrency:
-      group: github-pages
-      cancel-in-progress: false
     permissions:
       actions: read
       pages: write
@@ -144,27 +60,26 @@ jobs:
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deploy
         with:
-          artifact_name: ${{ needs.dashboard-build.outputs.artifact }}
+          artifact_name: ${{ needs.verify.outputs.artifact }}
 
   discord:
-    if: needs.publish-catalog.outputs.revision != '' && (github.event_name == 'push' || inputs.test_discord || needs.publish-catalog.outputs.promoted == 'true')
-    needs: publish-catalog
+    if: github.event_name == 'push' || inputs.test_discord
+    needs: dashboard
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.publish-catalog.outputs.revision }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Announce new matches
-        if: github.event_name == 'push' || needs.publish-catalog.outputs.promoted == 'true'
+      - name: Announce newly verified core observations
+        if: github.event_name == 'push'
         env:
-          BEFORE: ${{ github.event.before || github.sha }}
-          AFTER: ${{ needs.publish-catalog.outputs.revision }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
           DISCORD_MATCH_WEBHOOK: ${{ secrets.DISCORD_MATCH_WEBHOOK }}
-        run: python3 -m tools.notify_matches
+        run: python3 -m tools.notify_core
       - name: Send a test message
         if: github.event_name == 'workflow_dispatch' && inputs.test_discord
         env:
           DISCORD_MATCH_WEBHOOK: ${{ secrets.DISCORD_MATCH_WEBHOOK }}
-        run: python3 -m tools.notify_matches --test
+        run: python3 -m tools.notify_core --test
