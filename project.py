@@ -139,6 +139,8 @@ def dashboard(baseline):
     metrics = core_progress(baseline, tasks, catalog['functions'])
     (output.parent / 'progress.json').write_text(json.dumps(metrics, indent=2) + '\n', encoding='utf-8')
     (output.parent / CATALOG).write_text(json.dumps(catalog, indent=2) + '\n', encoding='utf-8')
+    brief = (ROOT / 'AGENT_BRIEF.txt').read_text(encoding='utf-8')
+    (output.parent / 'agent.txt').write_text(brief, encoding='utf-8')
     entries = []
     for entry in catalog['functions']:
         label = 'Open'
@@ -150,7 +152,9 @@ def dashboard(baseline):
                        'HASH': escape(baseline['engine_sha256']), 'CARDS': cards, 'ROWS': '\n'.join(rows),
                        'CORE_LIBRARY': report, 'VERIFIED_MB': f'{metrics["verified_machine_code_mb"]:.6f}',
                        'ENROLLED_MB': f'{metrics["enrolled_machine_code_mb"]:.6f}',
-                       'MATCHES': ''.join(entries) or '<li>No 1.76.1 core functions enrolled yet.</li>'}.items():
+                       'OPEN_MATCHES': str(metrics['enrolled_functions'] - metrics['verified_functions']),
+                       'AGENT_BRIEF': escape(brief.strip()),
+                       'MATCHES': ''.join(entries) or '<li>Waiting for the first verified reference.</li>'}.items():
         page = page.replace('%%' + key + '%%', value)
     output.write_text(page, encoding='utf-8')
     print(output)

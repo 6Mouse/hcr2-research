@@ -4,7 +4,7 @@ This track covers selected, self-contained math and utility routines from the pi
 
 ## Contribute
 
-1. Pick an open function from the [dashboard](https://6mouse.github.io/hcr2-research/#matching) or run `python -m tools.match_core list`. The first entry needs a reviewed reference range before it appears.
+1. Pick an open function from the [dashboard](https://6mouse.github.io/hcr2-research/#matching) or run `python -m tools.match_core list`. If the catalog is empty, [propose a reference](https://github.com/6Mouse/hcr2-research/issues/new?template=reference.yml) or choose an open research task.
 2. Install Android NDK **27.3.13750724 (r27d)**. Write the candidate at the path listed for the function. Use the catalog symbol with `extern "C"` so the checker finds it. Use readable C++ and explain uncertain names or behavior with an `Inferred` comment. Keep the routine self-contained. Inline assembly, embedded byte sequences, and compiler tricks used solely to force a match are outside the review standard.
 3. Run `python -m tools.match_core check ARM64-001` with your ID. Add `--archive "C:\path\to\HCR2-1.76.1.apks"` for a direct byte comparison. If the NDK is outside the default SDK location, add `--ndk` with its path.
 4. Submit just the candidate source in a PR named `[ARM64-001] Match <symbol>`. Paste the check result in the description. CI recompiles and checks the code section's length and SHA-256 against the reviewed catalog entry.
@@ -19,10 +19,10 @@ python -m tools.match_core enroll ARM64-001 example_name --offset 0x1000 --size 
 
 Review and commit `core_matches.json` to open that task. The command pins the raw archive range to its hash. The [toolchain file](toolchain.json) defines the compiler used for this pilot. The original 1.76.1 build flags remain unverified.
 
-Review and merge a passing candidate PR. Run the following command with that PR's ID and URL to check the exact reference bytes and record the match.
+Review the C++ and squash-merge a passing candidate PR. On `main`, CI recompiles it and checks its size and the digest pinned at enrollment. It then confirms who merged the PR and that the reviewed source matches the one on `main`. A passing owner merge is recorded automatically. Pages publishes the enrolled and verified bytes in decimal MB, and the configured Discord webhook gets an update. Overlapping reference ranges are rejected. The whole-core machine-code total remains unmeasured.
+
+If a passing merge needs manual recovery, run the following command with that PR's ID and URL to compare the exact archive bytes and record it locally. Commit the catalog change to `main`.
 
 ```powershell
 python -m tools.match_core record ARM64-001 --archive "C:\path\to\HCR2-1.76.1.apks" --evidence "https://github.com/6Mouse/hcr2-research/pull/123"
 ```
-
-Commit `core_matches.json` to `main` again. Pages publishes the enrolled and verified bytes in decimal MB, and the configured Discord webhook gets an update. Overlapping reference ranges are rejected. The whole-core machine-code total remains unmeasured.

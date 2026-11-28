@@ -1,0 +1,11 @@
+name: Propose a function reference
+description: Share evidence for one isolated HCR2 1.76.1 ARM64 math or utility routine.
+title: "[Reference] "
+body:
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Routine and evidence
+      description: Describe the routine, how you identified it in the pinned original ARM64 core, and how another reviewer can verify its file offset and exact byte length. Include the build fingerprint or source link. Keep binaries, raw code bytes, and private inputs local.
+    validations:
+      required: true

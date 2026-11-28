@@ -1,10 +1,8 @@
 # Share and review
 
-Share the [public repo](https://github.com/6Mouse/hcr2-research) and the [dashboard](https://6mouse.github.io/hcr2-research/). Give contributors this prompt.
+Share the [project page](https://6mouse.github.io/hcr2-research/). It links to the public repo, available tasks, and a [brief contributors can give their agents](https://6mouse.github.io/hcr2-research/agent.txt).
 
-> Read README.md and AGENTS.md. For matching, follow MATCHING.md and choose an open function. For mechanics and diagnostics, pick an open research task and report reproducible evidence. Both tracks use the pinned HCR2 1.76.1 ARM64 core library.
-
-For a function match, follow the [maintainer steps](MATCHING.md#enroll-and-record). Verify the reference range before opening the task and compare archive bytes before recording the match.
+For a function match, verify and enroll the reference once, then review and squash-merge passing PRs. GitHub Actions checks and records owner merges and updates Pages and Discord. GitHub may prompt you to approve checks for a first-time contributor. [Maintainer steps](MATCHING.md#enroll-and-record)
 
 ## Accept a report
 

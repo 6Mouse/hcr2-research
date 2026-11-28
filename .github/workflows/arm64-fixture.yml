@@ -23,8 +23,11 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
-      artifact: ${{ steps.artifact.outputs.name }}
+      approvals: ${{ steps.approve.outputs.matches }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,18 +57,79 @@ jobs:
       - name: Verify enrolled candidates
         if: steps.matching.outputs.count != '0'
         run: python3 -m tools.match_core check-all --ndk "$RUNNER_TEMP/android-ndk-r27d"
+      - name: Find verified candidates merged by the owner
+        id: approve
+        if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.test_discord && steps.matching.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          matches=$(python3 -m tools.match_core discover-approvals)
+          printf 'matches=%s\n' "$matches" >> "$GITHUB_OUTPUT"
+
+  publish-catalog:
+    if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      revision: ${{ steps.publish.outputs.revision }}
+      promoted: ${{ steps.publish.outputs.promoted }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: ${{ needs.verify.outputs.approvals != '' && needs.verify.outputs.approvals != '{}' }}
+      - name: Publish verified matches
+        id: publish
+        env:
+          MATCH_APPROVALS: ${{ needs.verify.outputs.approvals }}
+        shell: bash
+        run: |
+          tip=$(git ls-remote --exit-code origin refs/heads/main | cut -f1)
+          if [[ "$tip" != "$GITHUB_SHA" ]]; then
+            echo 'Main advanced. Its next run will reconcile pending matches.'
+            exit 0
+          fi
+          if [[ -n "$MATCH_APPROVALS" && "$MATCH_APPROVALS" != '{}' ]]; then
+            python3 -m tools.match_core apply-approvals
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit --only -m 'Record verified core function matches' -- core_matches.json
+            if ! git push origin HEAD:refs/heads/main; then
+              tip=$(git ls-remote --exit-code origin refs/heads/main | cut -f1)
+              if [[ "$tip" == "$GITHUB_SHA" ]]; then
+                exit 1
+              fi
+              echo 'Main advanced during publication. Its next run will reconcile pending matches.'
+              exit 0
+            fi
+            echo 'promoted=true' >> "$GITHUB_OUTPUT"
+          fi
+          revision=$(git rev-parse HEAD)
+          printf 'revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
+
+  dashboard-build:
+    if: needs.publish-catalog.outputs.revision != ''
+    needs: publish-catalog
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact: ${{ steps.artifact.outputs.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.publish-catalog.outputs.revision }}
+          persist-credentials: false
+      - run: python3 project.py dashboard
       - id: artifact
-        if: github.repository == '6Mouse/hcr2-research' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: echo "name=github-pages-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        if: steps.artifact.outputs.name != ''
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: dist
 
   dashboard:
-    if: needs.verify.outputs.artifact != ''
-    needs: verify
+    needs: dashboard-build
     runs-on: ubuntu-24.04
     permissions:
       actions: read
@@ -78,22 +142,23 @@ jobs:
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deploy
         with:
-          artifact_name: ${{ needs.verify.outputs.artifact }}
+          artifact_name: ${{ needs.dashboard-build.outputs.artifact }}
 
   discord:
-    if: github.event_name == 'push' || inputs.test_discord
-    needs: dashboard
+    if: github.event_name == 'push' || inputs.test_discord || needs.publish-catalog.outputs.promoted == 'true'
+    needs: [dashboard, publish-catalog]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.publish-catalog.outputs.revision }}
           fetch-depth: 0
           persist-credentials: false
       - name: Announce verified core research and function matches
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || needs.publish-catalog.outputs.promoted == 'true'
         env:
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
+          BEFORE: ${{ github.event.before || github.sha }}
+          AFTER: ${{ needs.publish-catalog.outputs.revision }}
           DISCORD_MATCH_WEBHOOK: ${{ secrets.DISCORD_MATCH_WEBHOOK }}
         run: python3 -m tools.notify_core
       - name: Send a test message

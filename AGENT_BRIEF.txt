@@ -1,0 +1,5 @@
+Work in https://github.com/6Mouse/hcr2-research. Read AGENTS.md and MATCHING.md.
+
+Pick any open ID in core_matches.json. The project matches selected, self-contained math and utility routines for HCR2 1.76.1 arm64-v8a. Put readable C++ in the listed candidate path and label inferred names or behavior. Run python -m tools.match_core check <ID> with the pinned Android NDK. Open a PR titled [<ID>] Match <symbol> with only that candidate and put the check result in the PR description. Keep original game files and reference bytes local.
+
+If there are no open functions, reproduce an open task in tasks.json or propose a reference with its provenance using the GitHub issue form. Keep uncertain function boundaries out of the catalog.

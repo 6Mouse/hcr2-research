@@ -28,12 +28,9 @@ def owner_merge(pr, repo, revision, identifier):
             and pr['title'].startswith(f'[{identifier}] '))
 
 
-def discover(repo, catalog):
+def find_owner_merges(repo, candidates):
     approvals = {}
-    for entry in catalog:
-        if entry.get('matched_on'):
-            continue
-        path = f'fixtures/{entry["fixture"]}/candidate.cpp'
+    for identifier, path in candidates.items():
         tree = git('ls-tree', 'HEAD', '--', path)
         if not tree.startswith('100644 blob '):
             continue
@@ -42,18 +39,23 @@ def discover(repo, catalog):
         for linked in github(repo, f'commits/{revision}/pulls'):
             number = linked['number']
             pr = github(repo, f'pulls/{number}')
-            if not owner_merge(pr, repo, revision, entry['id']):
+            if not owner_merge(pr, repo, revision, identifier):
                 continue
             files = github(repo, f'pulls/{number}/files')
             if (len(files) == 1 and files[0]['filename'] == path
                     and files[0]['status'] in {'added', 'modified'} and files[0]['sha'] == blob):
-                approvals[entry['id']] = number
+                approvals[identifier] = number
                 break
     return approvals
 
 
-def apply(catalog, approvals, repo, matched_on):
-    pending = {row['id'] for row in catalog if not row.get('matched_on')}
+def discover(repo, catalog):
+    return find_owner_merges(repo, {entry['id']: f'fixtures/{entry["fixture"]}/candidate.cpp'
+                                    for entry in catalog if not entry.get('matched_on')})
+
+
+def mark_verified(catalog, approvals, repo, stamp, *, date_field):
+    pending = {row['id'] for row in catalog if not row.get(date_field)}
     if not isinstance(approvals, dict) or not approvals.keys() <= pending:
         raise ValueError('Expected approvals for pending catalog entries.')
     for entry in catalog:
@@ -61,7 +63,12 @@ def apply(catalog, approvals, repo, matched_on):
             number = approvals[entry['id']]
             if type(number) is not int or number <= 0:
                 raise ValueError('Expected a positive GitHub pull request number.')
-            entry.update(matched_on=matched_on, evidence=f'https://github.com/{repo}/pull/{number}')
+            entry[date_field] = stamp
+            entry['evidence'] = f'https://github.com/{repo}/pull/{number}'
+
+
+def apply(catalog, approvals, repo, matched_on):
+    mark_verified(catalog, approvals, repo, matched_on, date_field='matched_on')
     return json.dumps(catalog, indent=2) + '\n'
 
 

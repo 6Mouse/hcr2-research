@@ -3,6 +3,7 @@ import argparse
 from datetime import date
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 import re
 from struct import unpack_from
@@ -13,6 +14,7 @@ from zipfile import BadZipFile, ZipFile
 
 from core_matches import CATALOG, candidate_path, read_matches
 from project import verify_release
+from tools.automatic_matches import find_owner_merges, mark_verified
 from tools.verify_fixture import ROOT, compile_fixture, default_ndk, sha, tools
 
 
@@ -91,7 +93,7 @@ def save_catalog(path, catalog, baseline, original):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
-    for name in ('list', 'candidate-count'):
+    for name in ('list', 'candidate-count', 'discover-approvals', 'apply-approvals'):
         commands.add_parser(name)
     enroll = commands.add_parser('enroll', help='Pin a reviewed reference range from the local archive')
     enroll.add_argument('id')
@@ -121,6 +123,15 @@ def main():
         available = [entry for entry in entries if (ROOT / candidate_path(entry['id'])).is_file()]
         if args.command == 'candidate-count':
             print(len(available))
+        elif args.command == 'discover-approvals':
+            paths = {entry['id']: candidate_path(entry['id']).as_posix()
+                     for entry in available if not entry.get('verified_on')}
+            print(json.dumps(find_owner_merges(os.environ['GITHUB_REPOSITORY'], paths), separators=(',', ':')))
+        elif args.command == 'apply-approvals':
+            approvals = json.loads(os.environ['MATCH_APPROVALS'])
+            mark_verified(entries, approvals, os.environ['GITHUB_REPOSITORY'], date.today().isoformat(),
+                          date_field='verified_on')
+            save_catalog(path, catalog, baseline, original)
         elif args.command == 'list':
             for entry in entries:
                 state = 'verified' if entry.get('verified_on') else 'open'
